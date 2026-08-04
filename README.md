@@ -2,6 +2,8 @@
 
 ## Instalação
 
+- Para quem não tiver o [VS Code](https://code.visualstudio.com/download?_exp_download=fb315fc982)
+
 - [Spring Boot para VS Code](https://code.visualstudio.com/docs/java/java-spring-boot)
 
 ## Injeção de Dependência
