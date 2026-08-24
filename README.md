@@ -173,8 +173,204 @@ public class CalculadoraController {
         return calculadora.calcular(operacao, v1, v2);
     }
 }
-
+- Exemplo de uma requisição **HTTP** com o *telnet*
+```bash
+GET /calcular/soma?v1=10&v2=20 HTTP/1.1
+Host: localhost:8080
 ```
+- Exemplos utilizando o *curl*
+```bash
+curl http://localhost:8080/calcular/soma?v1=10&v2=20
+curl -X POST -H "Content-Type: application/json" -d '{"nome":"Joao","idade":20}' http://localhost:8080/alunos
+```
+## Frontend para Calculadora
+- Dentro da pasta `main/java/resources/static` criar os arquivos:
+- HTML (`index.html`)
+```html
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Calculadora</title>
+
+    <link rel="stylesheet"
+          href="calculadora.css">
+</head>
+
+<body>
+
+    <div class="calculadora">
+
+        <h1>Calculadora</h1>
+
+        <div class="campo">
+            <label for="v1">Valor 1</label>
+
+            <input
+                id="v1"
+                type="number"
+                step="any"
+                placeholder="Digite o primeiro valor">
+        </div>
+
+        <div class="campo">
+            <label for="operacao">Operação</label>
+
+            <select id="operacao">
+                <option value="soma">Soma (+)</option>
+                <option value="subtracao">Subtração (-)</option>
+                <option value="multiplicacao">Multiplicação (*)</option>
+                <option value="divisao">Divisão (/)</option>
+            </select>
+        </div>
+
+        <div class="campo">
+            <label for="v2">Valor 2</label>
+
+            <input
+                id="v2"
+                type="number"
+                step="any"
+                placeholder="Digite o segundo valor">
+        </div>
+
+        <button onclick="calcular()">
+            Calcular
+        </button>
+
+        <div class="resultado">
+            Resultado:
+            <span id="resultado">?</span>
+        </div>
+
+    </div>
+
+    <script src="calculadora.js"></script>
+
+</body>
+
+</html>
+```
+- CSS (`calculadora.css`)
+```css
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+.calculadora {
+    width: 380px;
+    padding: 32px;
+    background-color: white;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+h1 {
+    margin-top: 0;
+    margin-bottom: 30px;
+    text-align: center;
+    color: #333;
+}
+
+.campo {
+    margin-bottom: 18px;
+}
+
+label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: bold;
+    color: #555;
+}
+
+input,
+select {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    outline: none;
+    transition: border-color 0.2s,
+                box-shadow 0.2s;
+}
+
+input:focus,
+select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+button {
+    width: 100%;
+    padding: 13px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 10px;
+    background-color: #667eea;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s,
+                transform 0.1s;
+}
+
+button:hover {
+    background-color: #5568d9;
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+.resultado {
+    margin-top: 25px;
+    padding: 15px;
+    text-align: center;
+    background-color: #f3f4ff;
+    border-radius: 10px;
+    color: #333;
+}
+
+#resultado {
+    font-size: 24px;
+    font-weight: bold;
+    color: #667eea;
+}
+```
+- Javascript (`calculadora.js`)
+```javascript
+async function calcular() {
+
+    const v1 = document.getElementById("v1").value;
+    const v2 = document.getElementById("v2").value;
+    const operacao = document.getElementById("operacao").value;
+
+    const url = `http://localhost:8080/calcular/${operacao}?v1=${v1}&v2=${v2}`;
+
+    const response = await fetch(url);
+    const resultado = await response.text();
+    document.getElementById("resultado").textContent = resultado;
+}
+```
+- Importante: incluir a propriedade `server.port=8081` no arquivo `application.properties`
+- Incluir no `CalculadoraController` o controle de **CORS** `@CrossOrigin(origins = "http://localhost:8081")`
 - [Códigos Status HTTP](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status)
 - Criar um *endpoint* para uma requisição *GET*
     ```java
