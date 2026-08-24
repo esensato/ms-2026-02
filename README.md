@@ -150,43 +150,31 @@ public class DemoApplication implements CommandLineRunner {
         <optional>true</optional>
     </dependency>
     ```
-- Criar um *endpoint* para uma requisição *GET*
-    ```java
-    
-    import org.slf4j.Logger;
-    import org.slf4j.LoggerFactory;
-    import org.springframework.http.HttpStatus;
-    import org.springframework.http.ResponseEntity;
-    import org.springframework.web.bind.annotation.GetMapping;
-    import org.springframework.web.bind.annotation.PathVariable;
-    import org.springframework.web.bind.annotation.RequestMapping;
-    import org.springframework.web.bind.annotation.RequestParam;
-    import org.springframework.web.bind.annotation.RestController;
-    
-    @RestController
-    @RequestMapping("/calculadora")
-    public class CalculadoraREST {
-    
-        private static final Logger logger = LoggerFactory.getLogger(CalculadoraREST.class);
-    
-        public Calculadora calculadora;
-    
-        public CalculadoraREST(Calculadora calculadora) {
-            this.calculadora = calculadora;
-        }
-    
-        @GetMapping("/{operacao}")
-        public ResponseEntity<Float> somar(@PathVariable String operacao,
-                @RequestParam(name = "v1", required = true, defaultValue = "0") Float v1,
-                @RequestParam(name = "v2", required = true, defaultValue = "0") Float v2) {
-    
-            logger.debug("Operacao: " + operacao);
-    
-            Float resultado = calculadora.calcular(operacao, v1, v2);
-            return new ResponseEntity<Float>(resultado, HttpStatus.OK);
-        }
+- Criar um *endpoint* para uma requisição *GET* (http://localhost:8080/calcular/soma?v1=10&v2=40)
+```java
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+
+@RestController
+@RequestMapping("/calcular")
+public class CalculadoraController {
+
+    // Spring faz a injeção de dependência
+    Calculadora calculadora;
+
+    public CalculadoraController(Calculadora calculadora) {
+        this.calculadora = calculadora;
     }
-    ```
+
+    @GetMapping("/{operacao}")
+    public float calcular(@PathVariable String operacao, Float v1, Float v2) {
+        return calculadora.calcular(operacao, v1, v2);
+    }
+}
+
+```
 - [Códigos Status HTTP](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status)
 - Criar um *endpoint* para uma requisição *GET*
     ```java
