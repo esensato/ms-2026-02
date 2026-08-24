@@ -135,7 +135,7 @@ public class DemoApplication implements CommandLineRunner {
 }
 ```
 - Implementar as demais operações (`subtracao`, `divisao` e `multiplicacao`)
-## Criando um End-Point
+## Criando um Endpoint para Calculadora
 - Adicionar as dependências abaixo no `pom.xml`
     ```xml
     <dependency>
@@ -173,15 +173,15 @@ public class CalculadoraController {
         return calculadora.calcular(operacao, v1, v2);
     }
 }
+```
 - Exemplo de uma requisição **HTTP** com o *telnet*
 ```bash
 GET /calcular/soma?v1=10&v2=20 HTTP/1.1
 Host: localhost:8080
 ```
-- Exemplos utilizando o *curl*
+- Exemplo utilizando o *curl*
 ```bash
 curl http://localhost:8080/calcular/soma?v1=10&v2=20
-curl -X POST -H "Content-Type: application/json" -d '{"nome":"Joao","idade":20}' http://localhost:8080/alunos
 ```
 ## Frontend para Calculadora
 - Dentro da pasta `main/java/resources/static` criar os arquivos:
@@ -269,7 +269,6 @@ body {
     justify-content: center;
     align-items: center;
     font-family: Arial, sans-serif;
-    background: linear-gradient(135deg, #667eea, #764ba2);
 }
 
 .calculadora {
@@ -371,7 +370,7 @@ async function calcular() {
 ```
 - Importante: incluir a propriedade `server.port=8081` no arquivo `application.properties`
 - Incluir no `CalculadoraController` o controle de **CORS** `@CrossOrigin(origins = "http://localhost:8081")`
-- [Códigos Status HTTP](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status)
+## Criando um Endpoint para Aluno
 - Criar um *endpoint* para uma requisição *GET*
     ```java
     import org.springframework.web.bind.annotation.RestController;
@@ -383,6 +382,7 @@ async function calcular() {
     @RestController
     @RequestMapping("/aluno")
     public class Aluno {
+        // para geração de mensagens de log é aconselhado utilizar o Logger
         private static final Logger logger = LoggerFactory.getLogger(Aluno.class);
     
         @GetMapping("/obter")
@@ -400,14 +400,15 @@ async function calcular() {
       return new ResponseEntity<String>("Joao", HttpStatus.OK);
     }
     ```
+- [Códigos Status HTTP](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status)
 ## Trabalhando com Propriedades
 - Editar o arquivo `application.properties`
 - Por exemplo, definir o nível de *log*
 
-    ```properties
-    logging.level.org.springframework.web: DEBUG
-    logging.level.nome.pacote: DEBUG
-    ```
+```javascript
+logging.level.org.springframework.web=DEBUG
+logging.level.nome.pacote=DEBUG
+```
 - Pode-se criar qualquer tipo de propriedade
 - Para ler uma propriedade basta utilizar a injeção de dependência com `@Value`
     ```java
@@ -475,6 +476,10 @@ async function calcular() {
         return new ResponseEntity<Integer>(Integer.parseInt("1"), HttpStatus.OK);
     }
     ```
+- Exemplo utilizando o *curl*
+```bash
+curl -X POST -H "Content-Type: application/json" -d '{"nome":"Joao","idade":20}' http://localhost:8080/alunos
+```
 ## Tratamento de Erros
 - Criar uma classe para encapsular o tipo de exceção
     ```java
@@ -669,6 +674,12 @@ async function calcular() {
     
     }
     ```
+### Exercício
+- Criar um serviço para a criação de usuários para acesso a um sistema:
+    - Permitir o cadastro de um novo usuário contendo `username`, `senha` e `nome completo`;
+    - Possibilitar que o usuário troque a senha informando o `username`, `senha` antiga e a nova;
+    - Verificar o `username` e `senha` e retornar `true` caso `username` e `senha` sejam válidos ou `false` caso contrário;
+    - Bloquear o usuário caso ele erre o login em mais do que 3 tentativas;
 ***
 ### Data Rest
 - Permite criar endpoints diretamente do repositório sem a necessidade de um *controller*
