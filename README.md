@@ -479,6 +479,7 @@ public ResponseEntity<Integer> cadastrar(@RequestBody AlunoBean aluno) {
 ```bash
 curl -X POST -H "Content-Type: application/json" -d '{"nome":"Joao","idade":20}' http://localhost:8080/alunos
 ```
+- Uma opção para requisições *restful* dentro do *VS Code* é a *extension* **Thunder Client**
 - Exemplo de requisição **GET* com *javascript* para o *frontend* da aplicação
 ```javascript
 async function buscarUsuario() {
