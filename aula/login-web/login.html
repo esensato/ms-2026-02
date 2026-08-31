@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Sistema de Usuários</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <div class="page-container">
+        <main class="card">
+
+            <div class="logo">
+                <div class="logo-icon">U</div>
+                <h1>Meu Sistema</h1>
+            </div>
+
+            <p class="subtitle">Acesse sua conta</p>
+
+            <form action="home.html" method="get">
+
+                <div class="form-group">
+                    <label for="username">Usuário</label>
+                    <input type="text" id="username" name="username" placeholder="Digite seu usuário" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Senha</label>
+                    <input type="password" id="password" name="password" placeholder="Digite sua senha" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    Entrar
+                </button>
+
+            </form>
+
+            <div class="separator">
+                <span>ou</span>
+            </div>
+
+            <div class="secondary-actions">
+                <a href="cadastro.html">
+                    Criar novo usuário
+                </a>
+
+                <a href="alterar-senha.html">
+                    Alterar minha senha
+                </a>
+            </div>
+
+        </main>
+
+        <footer>
+            Sistema de Usuários &copy; 2026
+        </footer>
+    </div>
+
+</body>
+
+</html>

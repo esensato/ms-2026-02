@@ -370,6 +370,7 @@ async function calcular() {
 ```
 - Importante: incluir a propriedade `server.port=8081` no arquivo `application.properties`
 - Incluir no `CalculadoraController` o controle de **CORS** `@CrossOrigin(origins = "http://localhost:8081")`
+
 ## Criando um Endpoint para Aluno
 - Criar um *endpoint* para uma requisição *GET*
     ```java
@@ -411,53 +412,51 @@ logging.level.nome.pacote=DEBUG
 ```
 - Pode-se criar qualquer tipo de propriedade
 - Para ler uma propriedade basta utilizar a injeção de dependência com `@Value`
-    ```java
-    @Value("${mensagem}")
-    private String mensagem;
-    ```
+```java
+@Value("${mensagem}")
+private String mensagem;
+```
 - Lê o valor da propriedade `mensagem` definida no arquivo `application.properties`
 ## Obtendo Parâmetros
-
 - Na própria URL
-
-    ```java
-    @GetMapping("/obter/{id}")
-    public String getAlunoPorNome(@PathVariable String id) {
-      logger.debug("Retornando aluno com id = " + id);
-      return "Encontrado aluno: " + id;
-    }
-    ```
+```java
+@GetMapping("/obter/{id}")
+public String getAlunoPorNome(@PathVariable String id) {
+    logger.debug("Retornando aluno com id = " + id);
+    return "Encontrado aluno: " + id;
+}
+```
 - Via parâmetros
 
-    ```java
-    @GetMapping("/obter")
-    public String getAlunoPorNome(@RequestParam(name="id", required = false, defaultValue = "0") String id) {
-      logger.debug("Retornando aluno com id = " + id);
-      return "Encontrado aluno: " + id;
-    }
-    ```
+```java
+@GetMapping("/obter")
+public String getAlunoPorNome(@RequestParam(name="id", required = false, defaultValue = "0") String id) {
+    logger.debug("Retornando aluno com id = " + id);
+    return "Encontrado aluno: " + id;
+}
+```
 
 ## Retornando JSON
 
 - Criar uma classe para encapsular os atributos
-    ```java
-    public class AlunoBean {
-    
-    private String id;
-    private String nome;
-    
-    @JsonIgnore
-    private String senha;
+```java
+public class AlunoBean {
 
-    public AlunoBean(String id, String nome) {
-      super();
-      this.id = id;
-      this.nome = nome;
-    }
-    // criar os gets / sets
-    
-    }
-    ```
+private String id;
+private String nome;
+
+@JsonIgnore
+private String senha;
+
+public AlunoBean(String id, String nome) {
+    super();
+    this.id = id;
+    this.nome = nome;
+}
+// criar os gets / sets
+
+}
+```
 - Para retornar *XML*
     ```xml
     <dependency>
@@ -469,131 +468,175 @@ logging.level.nome.pacote=DEBUG
 ## Processando POST
 - Instalar o [Postman](https://www.postman.com/downloads/)
 - Processando requisições do tipo *POST*
-    ```java
-    @PostMapping("/cadastrar")
-    public ResponseEntity<Integer> cadastrar(@RequestBody AlunoBean aluno) {
-        logger.debug("Cadastrando aluno: " + aluno.getNome());
-        return new ResponseEntity<Integer>(Integer.parseInt("1"), HttpStatus.OK);
-    }
-    ```
+```java
+@PostMapping("/cadastrar")
+public ResponseEntity<Integer> cadastrar(@RequestBody AlunoBean aluno) {
+    logger.debug("Cadastrando aluno: " + aluno.getNome());
+    return new ResponseEntity<Integer>(Integer.parseInt("1"), HttpStatus.OK);
+}
+```
 - Exemplo utilizando o *curl*
 ```bash
 curl -X POST -H "Content-Type: application/json" -d '{"nome":"Joao","idade":20}' http://localhost:8080/alunos
 ```
+- Exemplo de requisição **GET* com *javascript* para o *frontend* da aplicação
+```javascript
+async function buscarUsuario() {
+    try {
+        const response = await fetch("http://localhost:8080/users/joao");
+
+        const data = await response.json();
+
+        console.log(data);
+    } catch (error) {
+        console.error("Erro:", error);
+    }
+}
+```
+- Exemplo de *POST*
+```javascript
+async function criarUsuario() {
+
+    const usuario = {
+        username: "joao",
+        senha: "123456",
+        nomeCompleto: "João da Silva"
+    };
+
+    try {
+
+        const response = await fetch("http://localhost:8080/users", {
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify(usuario)
+        });
+
+        const data = await response.json();
+
+        console.log(data);
+
+    } catch (error) {
+        console.error("Erro:", error);
+    }
+}
+```
 ## Tratamento de Erros
 - Criar uma classe para encapsular o tipo de exceção
-    ```java
-    public class AlunoNaoLocalizadoException extends RuntimeException {
-    }
-    ```
+```java
+public class AlunoNaoLocalizadoException extends RuntimeException {
+}
+```
 - Definir uma classe para lidar com as exceções
-    ```java
-    @RestControllerAdvice
-    public class GlobalExceptionHandler {
-        @ResponseStatus(
-                value = HttpStatus.NOT_FOUND,
-                reason = "Aluno não localizado!")
-        @ExceptionHandler(AlunoNaoLocalizadoException.class)
-        public void handleException(AlunoNaoLocalizadoException e) {
-    
-        }
-    
+```java
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+    @ResponseStatus(
+            value = HttpStatus.NOT_FOUND,
+            reason = "Aluno não localizado!")
+    @ExceptionHandler(AlunoNaoLocalizadoException.class)
+    public void handleException(AlunoNaoLocalizadoException e) {
+
     }
-    ```
+}
+```
 - Lançar a exceção, quando aplicado
-    ```java
-    throw new AlunoNaoLocalizadoException();
-    ```
+```java
+throw new AlunoNaoLocalizadoException();
+```
 ***
 ## Validação de Dados
 - Utilizar o `spring-boot-starter-validation`
-    ```xml
-    <dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-validation</artifactId>
-    </dependency>
-    ```
+```xml
+<dependency>
+<groupId>org.springframework.boot</groupId>
+<artifactId>spring-boot-starter-validation</artifactId>
+</dependency>
+```
 - [Referência](https://docs.oracle.com/javaee/7/api/javax/validation/constraints/package-summary.html)
 - Exemplo
-    ```java
-    @PostMapping
-    public ResponseEntity<AlunoBean> criar(@Valid @RequestBody AlunoBean aluno) {
-    return new ResponseEntity<AlunoBean>(aluno, HttpStatus.OK);
-    }
-    ```
+```java
+@PostMapping
+public ResponseEntity<AlunoBean> criar(@Valid @RequestBody AlunoBean aluno) {
+return new ResponseEntity<AlunoBean>(aluno, HttpStatus.OK);
+}
+```
 - Na classe `AlunoBean` definir as restrições
-    ```java
-    @Size(min = 10, message="Nome deve conter no minimo 10 caracteres")
-    private String nome;
-    ```
+```java
+@Size(min = 10, message="Nome deve conter no minimo 10 caracteres")
+private String nome;
+```
 - Definir o tratamento de erro no *Controller Advice* (`GlobalExceptionHandler`) caso o tratamento seja global
-    ```java
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public Map<String, String> handleMethodArgumentNotValid(MethodArgumentNotValidException ex) {
-        Map<String, String> errors = new HashMap<String, String>();
-        ex.getBindingResult().getFieldErrors().forEach(error ->
-        errors.put(error.getField(), error.getDefaultMessage()));
-        return errors;
-    }
-    ```
+```java
+@ResponseStatus(HttpStatus.BAD_REQUEST)
+@ExceptionHandler(MethodArgumentNotValidException.class)
+public Map<String, String> handleMethodArgumentNotValid(MethodArgumentNotValidException ex) {
+    Map<String, String> errors = new HashMap<String, String>();
+    ex.getBindingResult().getFieldErrors().forEach(error ->
+    errors.put(error.getField(), error.getDefaultMessage()));
+    return errors;
+}
+```
 ***
 ## Persistência
 - Utilizar o `spring-boot-starter-data-jpa`
-    ```xml
-    <dependency>
-     <groupId>org.springframework.boot</groupId>
-     <artifactId>spring-boot-starter-data-jpa</artifactId>
-    </dependency>
-    
-    <dependency>
-     <groupId>com.h2database</groupId>
-     <artifactId>h2</artifactId>
-     <scope>runtime</scope>
-    </dependency>
-    ```
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-jpa</artifactId>
+</dependency>
+
+<dependency>
+    <groupId>com.h2database</groupId>
+    <artifactId>h2</artifactId>
+    <scope>runtime</scope>
+</dependency>
+```
 - [Console H2](http://localhost:8080/h2-console)
 - Configurar o **H2**
-    ```javascript
-    spring.datasource.url=jdbc:h2:mem:testdb
-    spring.datasource.driverClassName=org.h2.Driver
-    spring.datasource.username=sa
-    spring.datasource.password=password
-    spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
-    spring.h2.console.enabled=true
-    spring.jpa.defer-datasource-initialization=true
-    ```
+```javascript
+spring.datasource.url=jdbc:h2:mem:testdb
+spring.datasource.driverClassName=org.h2.Driver
+spring.datasource.username=sa
+spring.datasource.password=password
+spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
+spring.h2.console.enabled=true
+spring.jpa.defer-datasource-initialization=true
+```
 - Criar um arquivo `data.sql` dentro da pasta `resources`
-    ```sql
-    DROP TABLE IF EXISTS tab_aluno;
-    
-    CREATE TABLE tab_aluno (
-        id_aluno INT AUTO_INCREMENT PRIMARY KEY,
-        nome VARCHAR(30) NOT NULL,
-        turma VARCHAR(10) NOT NULL,
-        curso VARCHAR(50) DEFAULT NULL
-    );
-    ```
+```sql
+DROP TABLE IF EXISTS tab_aluno;
+
+CREATE TABLE tab_aluno (
+    id_aluno INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(30) NOT NULL,
+    turma VARCHAR(10) NOT NULL,
+    curso VARCHAR(50) DEFAULT NULL
+);
+```
 - Definir o *Bean* para a persistência
-    ```java
-    @Entity
-    @Table(name="TAB_ALUNO")
-    public class AlunoEntity {
-    @Id
-    @Column(name = "ID_ALUNO")
-    @GeneratedValue(strategy=GenerationType.AUTO)
-    private int id;
-    private String nome;
-    private String turma;
-    private String curso; 
-    // getters e setters
-    ```
+```java
+@Entity
+@Table(name="TAB_ALUNO")
+public class AlunoEntity {
+@Id
+@Column(name = "ID_ALUNO")
+@GeneratedValue(strategy=GenerationType.AUTO)
+private int id;
+private String nome;
+private String turma;
+private String curso; 
+// getters e setters
+```
 - Criar o repositório
-    ```java
-    @Repository
-    public interface AlunoRepository extends CrudRepository<AlunoEntity, Integer>{
-    }
-    ```
+```java
+@Repository
+public interface AlunoRepository extends CrudRepository<AlunoEntity, Integer>{
+}
+```
 - Métodos disponíveis de `CrudRepository`
     - `save(entidade)` – persiste uma entidade (insert / update)
     - `deleteById(id)` – remove um registro por meio do id
@@ -603,40 +646,39 @@ curl -X POST -H "Content-Type: application/json" -d '{"nome":"Joao","idade":20}'
     - `count()` – retorna o número total de registros
     - `existis(id)` – verifica se um registro existe com base em seu id
 - Utilizando no *controller*
-    ```java
-    @RestController
-    @RequestMapping(value = "aluno")
-    public class AlunoService {
-    
-    @Autowired
-    private AlunoRepository alunoRepo = null;
-    
-    @PostMapping(value="/cadastrar")
-    public AlunoEntity cadastrar(@RequestBody AlunoEntity aluno) {
-      return alunoRepo.save(aluno);
-    }
-    
-    }
-    ```
+```java
+@RestController
+@RequestMapping(value = "aluno")
+public class AlunoService {
+
+@Autowired
+private AlunoRepository alunoRepo = null;
+
+@PostMapping(value="/cadastrar")
+public AlunoEntity cadastrar(@RequestBody AlunoEntity aluno) {
+    return alunoRepo.save(aluno);
+}
+
+}
+```
 - Retornando uma lista
-    ```java
-    @GetMapping(value="/obter")
-    public List<AlunoEntity> getAluno() {
-    List<AlunoEntity> ret = new ArrayList<AlunoEntity>();
-     for (AlunoEntity aluno:alunoRepo.findAll()) {
-      ret.add(aluno);
-     }
-      return ret;
-    
+```java
+@GetMapping(value="/obter")
+public List<AlunoEntity> getAluno() {
+List<AlunoEntity> ret = new ArrayList<AlunoEntity>();
+    for (AlunoEntity aluno:alunoRepo.findAll()) {
+        ret.add(aluno);
     }
-    ```
+    return ret;
+}
+```
 - Outra opção
-    ```java
-    @GetMapping("/obter")
-    public ResponseEntity<Iterable<AlunoBean>> obterTodos() {
-    return new ResponseEntity<Iterable<AlunoBean>>(dao.findAll(), HttpStatus.OK);
-    }
-    ```
+```java
+@GetMapping("/obter")
+public ResponseEntity<Iterable<AlunoBean>> obterTodos() {
+return new ResponseEntity<Iterable<AlunoBean>>(dao.findAll(), HttpStatus.OK);
+}
+```
 ***
 ### Consultas Derivadas
 - [Referência](https://docs.spring.io/spring-data/jpa/docs/current/reference/html/#jpa.query-methods)
@@ -650,36 +692,41 @@ curl -X POST -H "Content-Type: application/json" -d '{"nome":"Joao","idade":20}'
     - `findByNomeLike(String expressao)` – efetua um like no nome, por exemplo, %Joao%
 ### Consultas Personalizadas
 - Além das consultas derivadas também é possível criar consultas personalizadas informando o código SQL diretamente
-    ```java
-    @Query("select a from GASTO_BEAN a where a.username = ?1")
-    List<AlunoEntity> alunosPorTurma(String username);
-    ```
+```java
+@Query("select a from GASTO_BEAN a where a.username = ?1")
+List<AlunoEntity> alunosPorTurma(String username);
+```
 - Exemplos:
-    ```java
-    @Repository
-    public interface AlunoDAO extends CrudRepository<AlunoBean, Integer> {
-    
-        // sempre inicia com findBy...
-        // incluir nome do atributo
-        Iterable<AlunoBean> findByCurso(String curso);
-    
-        // SELECT * FROM TAB_CURSO WHERE CURSO = ? AND TURMA = ?
-        Iterable<AlunoBean> findByCursoAndTurma(String curso, String turma);
-    
-        // SELECT * FROM TAB_ALUNO WHERE NOME LIKE ?
-        Iterable<AlunoBean> findByNomeLike(String nome);
-    
-        @Query("select a.id from TAB_ALUNO a")
-        Iterable<Integer> minhaConsulta();
-    
-    }
-    ```
+```java
+@Repository
+public interface AlunoDAO extends CrudRepository<AlunoBean, Integer> {
+
+    // sempre inicia com findBy...
+    // incluir nome do atributo
+    Iterable<AlunoBean> findByCurso(String curso);
+
+    // SELECT * FROM TAB_CURSO WHERE CURSO = ? AND TURMA = ?
+    Iterable<AlunoBean> findByCursoAndTurma(String curso, String turma);
+
+    // SELECT * FROM TAB_ALUNO WHERE NOME LIKE ?
+    Iterable<AlunoBean> findByNomeLike(String nome);
+
+    @Query("select a.id from TAB_ALUNO a")
+    Iterable<Integer> minhaConsulta();
+
+}
+```
 ### Exercício
 - Criar um serviço para a criação de usuários para acesso a um sistema:
     - Permitir o cadastro de um novo usuário contendo `username`, `senha` e `nome completo`;
     - Possibilitar que o usuário troque a senha informando o `username`, `senha` antiga e a nova;
     - Verificar o `username` e `senha` e retornar `true` caso `username` e `senha` sejam válidos ou `false` caso contrário;
     - Bloquear o usuário caso ele erre o login em mais do que 3 tentativas;
+    - Desbloquear um usuário que esteja bloqueado;
+    - Listar os usuários cadastrados;
+    - Listar o histório de *login* de um usuário contendo a data do login e se foi bem sucedido ou não;
+    - Elaborar um *frontend* utilizando como modelo
+        - 
 ***
 ### Data Rest
 - Permite criar endpoints diretamente do repositório sem a necessidade de um *controller*
@@ -695,28 +742,28 @@ curl -X POST -H "Content-Type: application/json" -d '{"nome":"Joao","idade":20}'
 - [Referência](https://docs.spring.io/spring-data/rest/docs/current-SNAPSHOT/reference/html/#reference)
 - Utilizar a anotação `@RestResource` para bloquear determinados métodos
 - `@RepositoryRestResource` pode ser utilizado para definir o caminho para acessar o *endpoint*
-    ```java
-    @RepositoryRestResource(path = "aluno", collectionResourceRel = "lista")
-    public interface AlunoRestResource extends JpaRepository<AlunoEntity, String> {
-    
-            @Override
-            @RestResource(exported = false)
-            void deleteById(String id);
-    }        
-    ```
+```java
+@RepositoryRestResource(path = "aluno", collectionResourceRel = "lista")
+public interface AlunoRestResource extends JpaRepository<AlunoEntity, String> {
+
+    @Override
+    @RestResource(exported = false)
+    void deleteById(String id);
+}        
+```
 - Para incluir o atribudo `id` nas respostas das APIs mapeadas pelo *Data Rest*
-    ```java
-    @Component
-    public class DataRestConfig implements RepositoryRestConfigurer {
-    
-        @Override
-        public void configureRepositoryRestConfiguration(RepositoryRestConfiguration config, CorsRegistry cors) {
-            // Incluir as classes Bean que terão seus ids expostos
-            config.exposeIdsFor(MatriculaBean.class, DisciplinaBean.class);
-        }
-    
+```java
+@Component
+public class DataRestConfig implements RepositoryRestConfigurer {
+
+    @Override
+    public void configureRepositoryRestConfiguration(RepositoryRestConfiguration config, CorsRegistry cors) {
+        // Incluir as classes Bean que terão seus ids expostos
+        config.exposeIdsFor(MatriculaBean.class, DisciplinaBean.class);
     }
-    ```
+
+}
+```
 - Para maiores configurações [Vide](https://docs.spring.io/spring-data/rest/docs/current/api/org/springframework/data/rest/core/config/RepositoryRestConfiguration.html)
 ***
 ## Aplicação Console

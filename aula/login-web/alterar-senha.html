@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alterar Senha - Sistema de Usuários</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <div class="page-container">
+        <main class="card">
+
+            <div class="logo">
+                <div class="logo-icon">U</div>
+                <h1>Meu Sistema</h1>
+            </div>
+
+            <p class="subtitle">Alterar senha</p>
+
+            <form action="login.html" method="get">
+
+                <div class="form-group">
+                    <label for="username">Usuário</label>
+                    <input type="text" id="username" name="username" placeholder="Digite seu usuário" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="oldPassword">Senha atual</label>
+                    <input type="password" id="oldPassword" name="oldPassword" placeholder="Digite sua senha atual"
+                        required>
+                </div>
+
+                <div class="form-group">
+                    <label for="newPassword">Nova senha</label>
+                    <input type="password" id="newPassword" name="newPassword" placeholder="Digite sua nova senha"
+                        required>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirmNewPassword">Confirme a nova senha</label>
+                    <input type="password" id="confirmNewPassword" name="confirmNewPassword"
+                        placeholder="Digite a nova senha novamente" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    Alterar senha
+                </button>
+
+            </form>
+
+            <div class="back-link">
+                <a href="login.html">
+                    ← Voltar para o login
+                </a>
+            </div>
+
+        </main>
+
+        <footer>
+            Sistema de Usuários &copy; 2026
+        </footer>
+    </div>
+
+</body>
+
+</html>

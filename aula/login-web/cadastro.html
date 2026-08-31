@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Criar Usuário - Sistema de Usuários</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <div class="page-container">
+        <main class="card">
+
+            <div class="logo">
+                <div class="logo-icon">U</div>
+                <h1>Meu Sistema</h1>
+            </div>
+
+            <p class="subtitle">Criar novo usuário</p>
+
+            <form action="login.html" method="get">
+
+                <div class="form-group">
+                    <label for="fullName">Nome completo</label>
+                    <input type="text" id="fullName" name="fullName" placeholder="Digite seu nome completo" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="username">Usuário</label>
+                    <input type="text" id="username" name="username" placeholder="Escolha um nome de usuário" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Senha</label>
+                    <input type="password" id="password" name="password" placeholder="Digite sua senha" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirmPassword">Confirme a senha</label>
+                    <input type="password" id="confirmPassword" name="confirmPassword"
+                        placeholder="Digite a senha novamente" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    Criar usuário
+                </button>
+
+            </form>
+
+            <div class="back-link">
+                <a href="login.html">
+                    ← Voltar para o login
+                </a>
+            </div>
+
+        </main>
+
+        <footer>
+            Sistema de Usuários &copy; 2026
+        </footer>
+    </div>
+
+</body>
+
+</html>
