@@ -725,8 +725,7 @@ public interface AlunoDAO extends CrudRepository<AlunoBean, Integer> {
     - Desbloquear um usuário que esteja bloqueado;
     - Listar os usuários cadastrados;
     - Listar o histório de *login* de um usuário contendo a data do login e se foi bem sucedido ou não;
-    - Elaborar um *frontend* utilizando como modelo
-        - 
+    - Elaborar um *frontend* utilizando como modelo o conteúdo do git [login-web](https://github.com/esensato/ms-2026-02/tree/main/aula/login-web)
 ***
 ### Data Rest
 - Permite criar endpoints diretamente do repositório sem a necessidade de um *controller*
