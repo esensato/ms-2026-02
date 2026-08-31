@@ -466,7 +466,6 @@ public AlunoBean(String id, String nome) {
     ```
 - Alterar o parâmetro do *header* da requisição `Accept: application/xml`
 ## Processando POST
-- Instalar o [Postman](https://www.postman.com/downloads/)
 - Processando requisições do tipo *POST*
 ```java
 @PostMapping("/cadastrar")
@@ -479,8 +478,8 @@ public ResponseEntity<Integer> cadastrar(@RequestBody AlunoBean aluno) {
 ```bash
 curl -X POST -H "Content-Type: application/json" -d '{"nome":"Joao","idade":20}' http://localhost:8080/alunos
 ```
-- Uma opção para requisições *restful* dentro do *VS Code* é a *extension* **Thunder Client**
-- Exemplo de requisição **GET* com *javascript* para o *frontend* da aplicação
+- Uma opção para requisições *restful* dentro do *VS Code* é a *extension* **Thunder Client** ou instalar o [Postman](https://www.postman.com/downloads/)
+- Exemplo de requisição *GET* com *javascript* para o *frontend* da aplicação
 ```javascript
 async function buscarUsuario() {
     try {
