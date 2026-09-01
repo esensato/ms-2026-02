@@ -594,6 +594,11 @@ public Map<String, String> handleMethodArgumentNotValid(MethodArgumentNotValidEx
     <artifactId>h2</artifactId>
     <scope>runtime</scope>
 </dependency>
+
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-h2console</artifactId>
+</dependency>
 ```
 - [Console H2](http://localhost:8080/h2-console)
 - Configurar o **H2**

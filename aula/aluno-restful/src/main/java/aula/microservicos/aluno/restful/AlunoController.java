@@ -7,10 +7,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import jakarta.validation.Valid;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-
 
 @RestController
 @RequestMapping("/aluno")
@@ -25,13 +27,24 @@ public class AlunoController {
         teste.dataNascimento = new Date();
         teste.curso = "CDN";
         teste.telefone = "2344-342324";
-        
-        return new ResponseEntity<Aluno>(teste, HttpStatus.OK);
+
+        if (id == 100) {
+            return new ResponseEntity<Aluno>(teste, HttpStatus.OK);
+        } else {
+            // return new ResponseEntity<Aluno>(new Aluno(), HttpStatus.NOT_FOUND);
+            throw new AlunoInexistenteException();
+        }
     }
 
     @PostMapping("/")
-    public ResponseEntity<Aluno> cadastro(@RequestBody Aluno aluno) {
+    public ResponseEntity<Aluno> cadastro(@Valid @RequestBody Aluno aluno) {
+
+        // if (aluno.nome.length() > 30) {
+        // return new ResponseEntity<Aluno>(new Aluno(), HttpStatus.BAD_REQUEST);
+        // } else {
         return new ResponseEntity<Aluno>(aluno, HttpStatus.OK);
+        // }
+
     }
-    
+
 }
