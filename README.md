@@ -694,7 +694,6 @@ public ResponseEntity<Iterable<AlunoEntity>> listarTodos() {
 }
 ```
 - **Exercício:** Complementar o *CRUD* para alunos com as opções de atualização e exclusão de um aluno pelo seu id
-***
 ### Consultas Derivadas
 - [Referência](https://docs.spring.io/spring-data/jpa/docs/current/reference/html/#jpa.query-methods)
 - É possível criar consultas simples porém de forma muito eficiente utilizando-se consultas derivadas, isto é, que seguem um determinado padrão de nomenclatura envolvendo nomes de atributos da entidade
@@ -737,7 +736,6 @@ public interface AlunoRepository extends CrudRepository<AlunoBean, Integer> {
     - Listar os usuários cadastrados;
     - Listar o histório de *login* de um usuário contendo a data do login e se foi bem sucedido ou não;
     - Elaborar um *frontend* utilizando como modelo o conteúdo do git [login-web](https://github.com/esensato/ms-2026-02/tree/main/aula/login-web)
-***
 ### Data Rest
 - Permite criar endpoints diretamente do repositório sem a necessidade de um *controller*
 ```xml
@@ -907,7 +905,8 @@ obj.put("turma", "XPTO4");
 ```java
 Aluno aluno = objectMapper.readValue("{\"nome\":\"Aluno JSON\", \"curso\": \"CDN\", \"turma\":\"XPTO4\"}", Aluno.class);
 ```
-### Utilizando o Open Feign
+***
+### Open Feign
 - Uma alternativa para realizar requisições HTTP
 ```xml
 <dependency>
