@@ -951,6 +951,104 @@ public void run(String... args) throws Exception {
 
 }
 ```
+# Exercício
+
+    | Serviço      | Porta       |
+    | -----------  | ----------- |
+    | Aluno        | 8080        |
+    | Disciplina   | 8081        |
+    | Matrícula    | 8082        |
+    | Faculdade    | 8083        |
+
+- Implementar um serviço CRUD para disciplina com os seguintes requisitos (utilizar *Data Rest*):
+    - Disciplina possui um id numérico sequencial, um nome e carga horária;
+    - Criar um endpoint com método POST para criar uma nova disciplina (POST `http://localhost:8081/api/disciplina`);
+    - Criar um endpoint GET para retornar os dados de uma disciplina por id (GET `http://localhost:8081/api/disciplina/{id}`)
+    - Criar um endpoint GET para retornar uma lista contendo todas as disciplinas (GET `http://localhost:8081/api/disciplina`);
+    - Criar um endpoint com um método PUT que permita alterar o nome e a carga horária de uma disciplina (PUT `http://localhost:8081/api/disciplina`);
+    - Criar um endpoint com um método DELETE que permita excluir uma disciplina (DELETE `http://localhost:8081/api/disciplina/{id}`);
+- Criar um serviço para controle de matrícula:
+    - Matrícula possui id do aluno, id da disciplina e um status (ATIVO, CANCELADO)
+    - Definir um endpoint para associar o id de um aluno ao id de uma disciplina (POST `http://localhost:8082/matricula/{idAluno}/{idDisciplina}`);
+    - Definir um endpoint para cancelar a matrícula do aluno de uma disciplina alterando o status (DELETE `http://localhost:8082/matricula/{idAluno}/{idDisciplina}`);
+- Criar um serviço orquestrador chamado faculdade para:
+    - Retornar todas as disciplinas ativas de um determinado aluno (GET `http://localhost:8083/faculdade/disciplinas/{idAluno}`);
+    - Retornar a carga horária total de um aluno (GET `http://localhost:8083/faculdade/carga/{idAluno}`);
+    - Remover uma disciplina (somente permitir excluir uma disciplina que não possua alunos associados) (DELETE `http://localhost:8083/faculdade/disciplinas/{idDisciplina}`);
+***
+## Documentação Endpoints
+- Padrão [OpenAPI](https://spec.openapis.org/oas/latest.html)
+- Exemplo [Strava API](https://developers.strava.com/swagger/swagger.json)
+- Utilizar o [Swagger](https://swagger.io/) para visualizar a documentação no padrão *OpenAPI*
+- Adicionar a dependência:
+    ```xml
+    <dependency>
+        <groupId>org.springdoc</groupId>
+        <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+        <version>2.2.0</version>
+    </dependency>
+    ```
+- Visualizando os *endpoints*:
+    - Formato JSON: http://localhost:8080/v3/api-docs
+    - Formato YAML: http://localhost:8080/v3/api-docs.yaml
+    - Interface HTML (Swagger): http://localhost:8080/swagger-ui/index.html
+- Anotações para documentação:
+    - End points:
+    ```java
+    @OpenAPIDefinition(info=@Info(title="Controle de Alunos"))
+    ```
+    - Operações: 
+    ```java
+    @Operation(summary = "Lista alunos", description = "Obtem a lista de todos os alunos", tags = { "alunos" })
+    @Parameters(value={@Parameter(name = "id")})
+    ```
+    - Respostas:
+    ```java
+    @ApiResponses(value = {
+    @ApiResponse(responseCode = "200", description = "Encontrou o aluno", content = { @Content(mediaType = "application/json",
+    schema = @Schema(implementation = AlunoBean.class)) }), @ApiResponse(responseCode = "400", description = "Id do aluno inválido",
+    content = @Content),
+    @ApiResponse(responseCode = "404", description = "Aluno não localizado",
+    content = @Content) })
+    ```
+- Documentando as entidades
+    ```java
+    @Schema(name="Aluno", description = "Representa um aluno")
+    public class AlunoBeanV1 {
+    @Schema(name = "matricula", description = "Número de matrícula", required = true, example = "M12345")
+    private String matricula;
+    }
+    ```
+## Geração Clientes
+- Em nodejs utilizar o pacote [openapi-client-axios](https://www.npmjs.com/package/openapi-client-axios)
+- Criar um projeto *nodejs*
+```bash
+mkdir cliente-node
+cd cliente-node
+npm init -y
+```
+- Importar o `openape-client-axios` e `openapicmd`
+```bash
+npm i --save openapi-client-axios openapicmd
+```
+- Gerar o cliente
+```bash
+npx openapicmd typegen http://localhost:8080/v3/api-docs > openapi.d.ts
+```
+- Efetuar as chamadas aos *endpoints*
+    ```javascript
+    const OpenAPIClientAxios = require("openapi-client-axios").default;
+    
+    const api = new OpenAPIClientAxios({
+        definition: "http://localhost:8084/v3/api-docs",
+    });
+    api.init()
+        .then((client) =>
+            client.matricular({ rm: "200", idDisciplina: "200" })
+        )
+        .then((res) => console.log("Resultado:", res.data));
+    
+    ```
 ***
 ### Spring State Machine
 - Aluno pode solicitar o cancelamento de uma matrícula em determinada disciplina
@@ -1155,104 +1253,6 @@ public void run(String... args) throws Exception {
     return cancelamento.getState().getId();
 
     }
-    ```
-# Exercício
-
-    | Serviço      | Porta       |
-    | -----------  | ----------- |
-    | Aluno        | 8080        |
-    | Disciplina   | 8081        |
-    | Matrícula    | 8082        |
-    | Faculdade    | 8083        |
-
-- Implementar um serviço CRUD para disciplina com os seguintes requisitos (utilizar *Data Rest*):
-    - Disciplina possui um id numérico sequencial, um nome e carga horária;
-    - Criar um endpoint com método POST para criar uma nova disciplina (POST `http://localhost:8081/api/disciplina`);
-    - Criar um endpoint GET para retornar os dados de uma disciplina por id (GET `http://localhost:8081/api/disciplina/{id}`)
-    - Criar um endpoint GET para retornar uma lista contendo todas as disciplinas (GET `http://localhost:8081/api/disciplina`);
-    - Criar um endpoint com um método PUT que permita alterar o nome e a carga horária de uma disciplina (PUT `http://localhost:8081/api/disciplina`);
-    - Criar um endpoint com um método DELETE que permita excluir uma disciplina (DELETE `http://localhost:8081/api/disciplina/{id}`);
-- Criar um serviço para controle de matrícula:
-    - Matrícula possui id do aluno, id da disciplina e um status (ATIVO, CANCELADO)
-    - Definir um endpoint para associar o id de um aluno ao id de uma disciplina (POST `http://localhost:8082/matricula/{idAluno}/{idDisciplina}`);
-    - Definir um endpoint para cancelar a matrícula do aluno de uma disciplina alterando o status (DELETE `http://localhost:8082/matricula/{idAluno}/{idDisciplina}`);
-- Criar um serviço orquestrador chamado faculdade para:
-    - Retornar todas as disciplinas ativas de um determinado aluno (GET `http://localhost:8083/faculdade/disciplinas/{idAluno}`);
-    - Retornar a carga horária total de um aluno (GET `http://localhost:8083/faculdade/carga/{idAluno}`);
-    - Remover uma disciplina (somente permitir excluir uma disciplina que não possua alunos associados) (DELETE `http://localhost:8083/faculdade/disciplinas/{idDisciplina}`);
-
-## Documentação Endpoints
-- Padrão [OpenAPI](https://spec.openapis.org/oas/latest.html)
-- Exemplo [Strava API](https://developers.strava.com/swagger/swagger.json)
-- Utilizar o [Swagger](https://swagger.io/) para visualizar a documentação no padrão *OpenAPI*
-- Adicionar a dependência:
-    ```xml
-    <dependency>
-        <groupId>org.springdoc</groupId>
-        <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-        <version>2.2.0</version>
-    </dependency>
-    ```
-- Visualizando os *endpoints*:
-    - Formato JSON: http://localhost:8080/v3/api-docs
-    - Formato YAML: http://localhost:8080/v3/api-docs.yaml
-    - Interface HTML (Swagger): http://localhost:8080/swagger-ui/index.html
-- Anotações para documentação:
-    - End points:
-    ```java
-    @OpenAPIDefinition(info=@Info(title="Controle de Alunos"))
-    ```
-    - Operações: 
-    ```java
-    @Operation(summary = "Lista alunos", description = "Obtem a lista de todos os alunos", tags = { "alunos" })
-    @Parameters(value={@Parameter(name = "id")})
-    ```
-    - Respostas:
-    ```java
-    @ApiResponses(value = {
-    @ApiResponse(responseCode = "200", description = "Encontrou o aluno", content = { @Content(mediaType = "application/json",
-    schema = @Schema(implementation = AlunoBean.class)) }), @ApiResponse(responseCode = "400", description = "Id do aluno inválido",
-    content = @Content),
-    @ApiResponse(responseCode = "404", description = "Aluno não localizado",
-    content = @Content) })
-    ```
-- Documentando as entidades
-    ```java
-    @Schema(name="Aluno", description = "Representa um aluno")
-    public class AlunoBeanV1 {
-    @Schema(name = "matricula", description = "Número de matrícula", required = true, example = "M12345")
-    private String matricula;
-    }
-    ```
-## Geração Clientes
-- Em nodejs utilizar o pacote [openapi-client-axios](https://www.npmjs.com/package/openapi-client-axios)
-- Criar um projeto *nodejs*
-```bash
-mkdir cliente-node
-cd cliente-node
-npm init -y
-```
-- Importar o `openape-client-axios` e `openapicmd`
-```bash
-npm i --save openapi-client-axios openapicmd
-```
-- Gerar o cliente
-```bash
-npx openapicmd typegen http://localhost:8080/v3/api-docs > openapi.d.ts
-```
-- Efetuar as chamadas aos *endpoints*
-    ```javascript
-    const OpenAPIClientAxios = require("openapi-client-axios").default;
-    
-    const api = new OpenAPIClientAxios({
-        definition: "http://localhost:8084/v3/api-docs",
-    });
-    api.init()
-        .then((client) =>
-            client.matricular({ rm: "200", idDisciplina: "200" })
-        )
-        .then((res) => console.log("Resultado:", res.data));
-    
     ```
 ## Actuator
 - Permite verificar a "saúde" (health) de um serviço, por exemplo, se ele está em execução, sua disponibilidade, configuração, etc...
