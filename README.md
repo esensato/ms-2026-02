@@ -621,24 +621,36 @@ CREATE TABLE tab_aluno (
     turma VARCHAR(10) NOT NULL,
     curso VARCHAR(50) DEFAULT NULL
 );
+
+INSERT INTO tab_aluno(nome, turma, curso) VALUES ('Joao Pereira', 'XPTO1', 'CDN');
+
+INSERT INTO tab_aluno(nome, turma, curso) VALUES ('Maria Silva', 'XPTO2', 'CDN');
 ```
-- Definir o *Bean* para a persistência
+- Definir a *Entidade* para a persistência
 ```java
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+
 @Entity
 @Table(name="TAB_ALUNO")
 public class AlunoEntity {
 @Id
 @Column(name = "ID_ALUNO")
-@GeneratedValue(strategy=GenerationType.AUTO)
-private int id;
+@GeneratedValue(strategy=GenerationType.IDENTITY)
+private Integer id;
 private String nome;
 private String turma;
 private String curso; 
 // getters e setters
 ```
-- Criar o repositório
+- Criar o repositório (`extends CrudRepository`)
 ```java
-@Repository
+import org.springframework.data.repository.CrudRepository;
+
 public interface AlunoRepository extends CrudRepository<AlunoEntity, Integer>{
 }
 ```
@@ -652,43 +664,41 @@ public interface AlunoRepository extends CrudRepository<AlunoEntity, Integer>{
     - `existis(id)` – verifica se um registro existe com base em seu id
 - Utilizando no *controller*
 ```java
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 @RestController
 @RequestMapping(value = "aluno")
-public class AlunoService {
+public class AlunoController {
 
-@Autowired
-private AlunoRepository alunoRepo = null;
+    private AlunoRepository alunoRepo = null;
 
-@PostMapping(value="/cadastrar")
-public AlunoEntity cadastrar(@RequestBody AlunoEntity aluno) {
-    return alunoRepo.save(aluno);
-}
-
-}
-```
-- Retornando uma lista
-```java
-@GetMapping(value="/obter")
-public List<AlunoEntity> getAluno() {
-List<AlunoEntity> ret = new ArrayList<AlunoEntity>();
-    for (AlunoEntity aluno:alunoRepo.findAll()) {
-        ret.add(aluno);
+    public AlunoController(AlunoRepository alunoRepo) {
+        this.alunoRepo = alunoRepo;
     }
-    return ret;
+
+    @PostMapping(value = "/cadastrar")
+    public AlunoEntity cadastrar(@RequestBody AlunoEntity aluno) {
+        return alunoRepo.save(aluno);
+    }
+
 }
 ```
-- Outra opção
+- Retornando uma lista dos alunos cadastrados
 ```java
-@GetMapping("/obter")
-public ResponseEntity<Iterable<AlunoBean>> obterTodos() {
-return new ResponseEntity<Iterable<AlunoBean>>(dao.findAll(), HttpStatus.OK);
+@GetMapping("/listar")
+public ResponseEntity<Iterable<AlunoEntity>> listarTodos() {
+    return new ResponseEntity<Iterable<AlunoEntity>>(alunoRepo.findAll(), HttpStatus.OK);
 }
 ```
+- **Exercício:** Complementar o *CRUD* para alunos com as opções de atualização e exclusão de um aluno pelo seu id
 ***
 ### Consultas Derivadas
 - [Referência](https://docs.spring.io/spring-data/jpa/docs/current/reference/html/#jpa.query-methods)
 - É possível criar consultas simples porém de forma muito eficiente utilizando-se consultas derivadas, isto é, que seguem um determinado padrão de nomenclatura envolvendo nomes de atributos da entidade
-- Basta declarar a assinatura do método desejado na interface `@Repository`
+- Basta declarar a assinatura do método desejado na interface `CrudRepository`
 - Por exemplo, `findByNome (String nome)` efetua uma busca utilizando como chave o atributo nome
 - Outros exemplos:
     - `findByNomeIsNot(String nome)` – nomes diferentes de...
@@ -696,28 +706,24 @@ return new ResponseEntity<Iterable<AlunoBean>>(dao.findAll(), HttpStatus.OK);
     - `findByNomeContaining(String prefixo)` – alunos cujo nome contenha o prefixo informado
     - `findByNomeLike(String expressao)` – efetua um like no nome, por exemplo, %Joao%
 ### Consultas Personalizadas
-- Além das consultas derivadas também é possível criar consultas personalizadas informando o código SQL diretamente
+- Além das consultas derivadas também é possível criar consultas personalizadas informando o código *SQL* diretamente
 ```java
-@Query("select a from GASTO_BEAN a where a.username = ?1")
-List<AlunoEntity> alunosPorTurma(String username);
+@Query("select a from AlunoEntity a where a.turma = ?1")
+public List<AlunoEntity> alunosPorTurma(String turma);
 ```
 - Exemplos:
 ```java
-@Repository
-public interface AlunoDAO extends CrudRepository<AlunoBean, Integer> {
+public interface AlunoRepository extends CrudRepository<AlunoBean, Integer> {
 
     // sempre inicia com findBy...
     // incluir nome do atributo
-    Iterable<AlunoBean> findByCurso(String curso);
+    Iterable<AlunoEntity> findByCurso(String curso);
 
     // SELECT * FROM TAB_CURSO WHERE CURSO = ? AND TURMA = ?
-    Iterable<AlunoBean> findByCursoAndTurma(String curso, String turma);
+    Iterable<AlunoEntity> findByCursoAndTurma(String curso, String turma);
 
     // SELECT * FROM TAB_ALUNO WHERE NOME LIKE ?
-    Iterable<AlunoBean> findByNomeLike(String nome);
-
-    @Query("select a.id from TAB_ALUNO a")
-    Iterable<Integer> minhaConsulta();
+    Iterable<AlunoEntity> findByNomeLike(String nome);
 
 }
 ```
@@ -734,20 +740,53 @@ public interface AlunoDAO extends CrudRepository<AlunoBean, Integer> {
 ***
 ### Data Rest
 - Permite criar endpoints diretamente do repositório sem a necessidade de um *controller*
-    ```xml
-    <dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-data-rest</artifactId>
-    </dependency>
-    ```
-- Criar apenas a interface anotada como `@Repository` e estendendo `CrudRepository`
+```xml
+<dependency>
+<groupId>org.springframework.boot</groupId>
+<artifactId>spring-boot-starter-data-rest</artifactId>
+</dependency>
+```
+- Criar apenas a interface `CrudRepository`
 - Adicionar uma configuração `spring.data.rest.basePath=/api`
 - Para testar: `http://localhost:8080/api`
 - [Referência](https://docs.spring.io/spring-data/rest/docs/current-SNAPSHOT/reference/html/#reference)
+- Por exemplo, para um serviço de gerenciamento de disciplinas com o *SQL* abaixo
+```sql
+DROP TABLE IF EXISTS tab_disciplina;
+
+CREATE TABLE tab_disciplina (
+    id_disciplina INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(30) NOT NULL,
+    creditos INTEGER);
+
+INSERT INTO tab_disciplina(nome, creditos) VALUES ('Estrutura de Dados', 10);
+
+INSERT INTO tab_disciplina(nome, creditos) VALUES ('Gestão de Projetos', 15);
+```
+- Definir a *Entidade* para a persistência
+```java
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+
+@Entity
+@Table(name="TAB_DISCIPLINA")
+public class DisciplinaEntity {
+@Id
+@Column(name = "ID_DISCIPLINA")
+@GeneratedValue(strategy=GenerationType.IDENTITY)
+private Integer id;
+private String nome;
+private Integer creditos;
+// getters e setters
+```
 - Utilizar a anotação `@RestResource` para bloquear determinados métodos
 - `@RepositoryRestResource` pode ser utilizado para definir o caminho para acessar o *endpoint*
 ```java
-@RepositoryRestResource(path = "aluno", collectionResourceRel = "lista")
+@RepositoryRestResource(path = "aluno")
 public interface AlunoRestResource extends JpaRepository<AlunoEntity, String> {
 
     @Override
@@ -772,146 +811,159 @@ public class DataRestConfig implements RepositoryRestConfigurer {
 ***
 ## Aplicação Console
 - Para executar uma aplicação Spring Boot no console
-    ```java
-    @Component
-    public class ConsoleSpring implements CommandLineRunner {
-    
-        @Override
-        public void run(String... args) throws Exception {
-    
-        }
-    
+```java
+@Component
+public class ConsoleSpring implements CommandLineRunner {
+
+    @Override
+    public void run(String... args) throws Exception {
+
     }
-    ```
+
+}
+```
 ***
 ## Efetuando Requisições HTTP
 - Alterar a dependência no `pom.xml` para não incluir o *tomcat* como servidor:
-    ```xml
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-web</artifactId>
-        <exclusions>
-            <exclusion>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-starter-tomcat</artifactId>
-            </exclusion>
-        </exclusions>
-    </dependency>
-    ```
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-web</artifactId>
+    <exclusions>
+        <exclusion>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-tomcat</artifactId>
+        </exclusion>
+    </exclusions>
+</dependency>
+```
 - Utilizar o `RestClient`
-    ```java
-    RestClient restClient = RestClient.create();
+```java
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestClient;
 
-    ResponseEntity<String> result = restClient.get()
-            .uri("http://localhost:8080/aluno/1")
-            .retrieve()
-            .toEntity(String.class);
-    System.out.println("Status: " + result.getStatusCode());
-    System.out.println("Headers: " + result.getHeaders());
-    System.out.println("Conteudo: " + result.getBody());
-    ```
-- Encapsular o resultado em um objeto da classe `AlunoBean`:
-    ```java
-    RestClient restClient = RestClient.create();
-    
-    ResponseEntity<AlunoBean> result = restClient.get()
-            .uri("http://localhost:8080/aluno/101")
-            .retrieve()
-            .toEntity(AlunoBean.class);
-    System.out.println("Status: " + result.getStatusCode());
-    System.out.println("Headers: " + result.getHeaders());
-    System.out.println("Conteudo: " + result.getBody().getNome());
-    ```
+@SpringBootApplication
+public class LocalAlunoClientApplication implements CommandLineRunner {
+
+	public static void main(String[] args) {
+		SpringApplication.run(LocalAlunoClientApplication.class, args);
+	}
+
+	@Override
+	public void run(String... args) throws Exception {
+
+		RestClient restClient = RestClient.create();
+
+		ResponseEntity<String> result = restClient.get()
+				.uri("http://localhost:8080/aluno/listar")
+				.retrieve()
+				.toEntity(String.class);
+		System.out.println("Status: " + result.getStatusCode());
+		System.out.println("Headers: " + result.getHeaders());
+		System.out.println("Conteudo: " + result.getBody());
+
+	}
+
+}
+```
 - Efetuando um *POST* (sem retorno esperado no corpo da resposta)
-    ```java
-    AlunoBean aluno = new AlunoBean();
-    ResponseEntity<Void> response = restClient.post()
-      .uri("ttp://localhost:8080/aluno")
-      .contentType(APPLICATION_JSON)
-      .body(aluno)
-      .retrieve()
-      .toBodilessEntity();
-    ```
+```java
+// incluir este import para o APPLICATION_JSON
+import static org.springframework.http.MediaType.APPLICATION_JSON;
+
+RestClient restClient = RestClient.create();
+
+ResponseEntity<Void> result = restClient.post()
+        .uri("http://localhost:8080/aluno/cadastrar")
+        .contentType(APPLICATION_JSON)
+        .body("{\"nome\":\"Aluno JSON\", \"curso\": \"CDN\", \"turma\":\"XPTO4\"}")
+        .retrieve()
+        .toBodilessEntity();
+System.out.println("Status: " + result.getStatusCode());
+```
 ## Trabalhando com JSON
-- Incluir nas dependências do projeto `pom.xml`
-    ```xml
-    <dependency>
-        <groupId>org.json</groupId>
-        <artifactId>json</artifactId>
-        <version>20240303</version>
-    </dependency>
-    ```
+- O **Spring Boot** já inclui o pacote **Jackson** para trabalhar com objetos *JSON*
 - Principais classes e métodos:
-    - `JSONObject`: representa um objeto JSON
-    - `JSONArray`: representa um array JSON
-    - `length()`: retorna o total de objetos contidos no `JSONArray`
-    - `getJSONObject()`, `getJSONArray()`, `getString()`, etc...: retornam o valor de um atributo de um objeto JSON
+    - `ObjectMapper`: efetua o mapeamento entre objetos / *strings* e *JSON*
+    - `ObjectNode`: representa um nó (objeto) *JSON*
 ### Mapeando Atributos JSON para Objetos
 - Utilizar o `ObjectMapper`:
-    ```java
-    ObjectMapper objectMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    ```
-- Exemplo:
-    ```java
-    DisciplinaBean disciplina = objectMapper.readValue(disciplinas.getJSONObject(i).toString(), DisciplinaBean.class);
-    ```
+```java
+// incluir este import para o jackson
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
+
+ObjectMapper mapper = new ObjectMapper();
+ObjectNode obj = mapper.createObjectNode();
+
+obj.put("nome", "Aluno JSON");
+obj.put("curso", "CDN");
+obj.put("turma", "XPTO4");
+```
+- Caso já exista um objeto ele pode ser mais facilmente mapeado para o *JSON*
+```java
+Aluno aluno = objectMapper.readValue("{\"nome\":\"Aluno JSON\", \"curso\": \"CDN\", \"turma\":\"XPTO4\"}", Aluno.class);
+```
 ### Utilizando o Open Feign
 - Uma alternativa para realizar requisições HTTP
-    ```xml
-    <dependency>
-    <groupId>org.springframework.cloud</groupId>
-    <artifactId>spring-cloud-starter-openfeign</artifactId>
-    <version>4.2.0</version>
-    </dependency>
-    ```
+```xml
+<dependency>
+<groupId>org.springframework.cloud</groupId>
+<artifactId>spring-cloud-starter-openfeign</artifactId>
+<version>5.0.3</version>
+</dependency>
+```
 - Habilitar o uso do OpenFeign (`@EnableFeignClients`) na classe `Application`
-    ```java
-    @SpringBootApplication
-    @EnableFeignClients
-    public class AlunoApplication {
-    
-    	public static void main(String[] args) {
-    		SpringApplication.run(AlunoApplication.class, args);
-    	}
-    
+```java
+@SpringBootApplication
+@EnableFeignClients
+public class AlunoApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(AlunoApplication.class, args);
     }
-    ```
+
+}
+```
 - Implementar as requisições
-    ```java
-    @FeignClient(name = "aluno", url = "localhost:8080")
-    public interface AlunoClienteFeign {
-    
-        @GetMapping("/aluno/{ra}")
-        public ResponseEntity<AlunoEntity> obterAluno(@PathVariable String ra);
-    
-    }
-    ```
+```java
+@FeignClient(name = "aluno", url = "${url}")
+public interface AlunoClienteFeign {
+
+    @GetMapping("/aluno/{id}")
+    public ResponseEntity<AlunoEntity> obterAluno(@PathVariable Integer id);
+
+}
+```
 - Testar o acesso
-    ```java
-    @Autowired
-    private AlunoClienteFeign alunoFeign;
-    
-    @Override
-    public void run(String... args) throws Exception {
-    
-        System.out.println("----------------");
-        System.out.println(alunoFeign.obterAluno("400").getBody().getNome());
-    
-    }
-    ```
+```java
+@Autowired
+private AlunoClienteFeign alunoFeign;
+
+@Override
+public void run(String... args) throws Exception {
+
+    System.out.println("----------------");
+    System.out.println(alunoFeign.obterAluno("400").getBody().getNome());
+
+}
+```
 ***
 ### Spring State Machine
 - Aluno pode solicitar o cancelamento de uma matrícula em determinada disciplina
 - Para isso, existe um *worflow* conforme abaixo
 ![screenshot](img/wf.png)
 - Importar as dependências
-    ```xml
-    <dependency>
-        <groupId>org.springframework.statemachine</groupId>
-        <artifactId>spring-statemachine-starter</artifactId>
-        <version>3.2.1</version>
-    </dependency>
-    ```
+```xml
+<dependency>
+    <groupId>org.springframework.statemachine</groupId>
+    <artifactId>spring-statemachine-starter</artifactId>
+    <version>3.2.1</version>
+</dependency>
+```
 - Criar os estados e eventos
     ```java
     public enum CancelamentoMatriculaEstado {
