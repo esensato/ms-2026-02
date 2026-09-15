@@ -9,3 +9,6 @@ CREATE TABLE tab_aluno (
 
 insert into tab_aluno(nome, turma, curso)
 values ('Edson A. Sensato', '3AB', 'CDN');
+
+insert into tab_aluno(nome, turma, curso)
+values ('Maria dos Santos', '3CD', 'CDN');

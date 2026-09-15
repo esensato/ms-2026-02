@@ -784,8 +784,11 @@ private Integer creditos;
 - Utilizar a anotação `@RestResource` para bloquear determinados métodos
 - `@RepositoryRestResource` pode ser utilizado para definir o caminho para acessar o *endpoint*
 ```java
-@RepositoryRestResource(path = "aluno")
-public interface AlunoRestResource extends JpaRepository<AlunoEntity, String> {
+import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.rest.core.annotation.RepositoryRestResource;
+
+@RepositoryRestResource(path = "disciplina")
+public interface DisciplinaRepository extends CrudRepository<DisciplinaEntity, Integer> {
 
     @Override
     @RestResource(exported = false)
