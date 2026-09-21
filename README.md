@@ -944,7 +944,7 @@ public interface AlunoClienteFeign {
 ```java
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/matricula")
 public class MatriculaController {
 
     private AlunoClienteFeign alunoFeign;
