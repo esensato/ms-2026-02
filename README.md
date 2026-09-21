@@ -942,16 +942,25 @@ public interface AlunoClienteFeign {
 ```
 - Testar o acesso
 ```java
-@Autowired
-private AlunoClienteFeign alunoFeign;
 
-@Override
-public void run(String... args) throws Exception {
+@RestController
+@RequestMapping("/api")
+public class MatriculaController {
 
-    System.out.println("----------------");
-    System.out.println(alunoFeign.obterAluno("400").getBody().getNome());
+    private AlunoClienteFeign alunoFeign;
+
+    public MatriculaController(AlunoClienteFeign alunoFeign) {
+        this.alunoFeign = alunoFeign;
+    }
+
+    @GetMapping("/aluno/{idAluno}")
+    public ResponseEntity<AlunoEntity> obterAluno(@PathVariable Integer idAluno) {
+        return new ResponseEntity<AlunoEntity>(alunoFeign.obterAluno(idAluno).getBody().titulo, HttpStatus.OK);
+    }
 
 }
+
+
 ```
 # Exercício
 
