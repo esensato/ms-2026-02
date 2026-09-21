@@ -953,9 +953,9 @@ public class MatriculaController {
         this.alunoFeign = alunoFeign;
     }
 
-    @GetMapping("/aluno/{idAluno}")
-    public ResponseEntity<AlunoEntity> obterAluno(@PathVariable Integer idAluno) {
-        return new ResponseEntity<AlunoEntity>(alunoFeign.obterAluno(idAluno).getBody().titulo, HttpStatus.OK);
+    @GetMapping("/aluno/{id}")
+    public ResponseEntity<AlunoEntity> obterAluno(@PathVariable Integer id) {
+        return new ResponseEntity<AlunoEntity>(alunoFeign.obterAluno(id).getBody().titulo, HttpStatus.OK);
     }
 
 }
