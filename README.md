@@ -959,8 +959,6 @@ public class MatriculaController {
     }
 
 }
-
-
 ```
 # Exercício
 
@@ -992,13 +990,13 @@ public class MatriculaController {
 - Exemplo [Strava API](https://developers.strava.com/swagger/swagger.json)
 - Utilizar o [Swagger](https://swagger.io/) para visualizar a documentação no padrão *OpenAPI*
 - Adicionar a dependência:
-    ```xml
-    <dependency>
-        <groupId>org.springdoc</groupId>
-        <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-        <version>2.2.0</version>
-    </dependency>
-    ```
+```xml
+<dependency>
+    <groupId>org.springdoc</groupId>
+    <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+    <version>3.1.1</version>
+</dependency>
+```
 - Visualizando os *endpoints*:
     - Formato JSON: http://localhost:8080/v3/api-docs
     - Formato YAML: http://localhost:8080/v3/api-docs.yaml
@@ -1017,19 +1015,19 @@ public class MatriculaController {
     ```java
     @ApiResponses(value = {
     @ApiResponse(responseCode = "200", description = "Encontrou o aluno", content = { @Content(mediaType = "application/json",
-    schema = @Schema(implementation = AlunoBean.class)) }), @ApiResponse(responseCode = "400", description = "Id do aluno inválido",
+    schema = @Schema(implementation = AlunoEntity.class)) }), @ApiResponse(responseCode = "400", description = "Id do aluno inválido",
     content = @Content),
     @ApiResponse(responseCode = "404", description = "Aluno não localizado",
     content = @Content) })
     ```
 - Documentando as entidades
-    ```java
-    @Schema(name="Aluno", description = "Representa um aluno")
-    public class AlunoBeanV1 {
-    @Schema(name = "matricula", description = "Número de matrícula", required = true, example = "M12345")
-    private String matricula;
-    }
-    ```
+```java
+@Schema(name="Aluno", description = "Representa um aluno")
+public class AlunoEntity {
+@Schema(name = "matricula", description = "Número de matrícula", required = true, example = "M12345")
+private String matricula;
+}
+```
 ## Geração Clientes
 - Em nodejs utilizar o pacote [openapi-client-axios](https://www.npmjs.com/package/openapi-client-axios)
 - Criar um projeto *nodejs*
@@ -1047,233 +1045,28 @@ npm i --save openapi-client-axios openapicmd
 npx openapicmd typegen http://localhost:8080/v3/api-docs > openapi.d.ts
 ```
 - Efetuar as chamadas aos *endpoints*
-    ```javascript
-    const OpenAPIClientAxios = require("openapi-client-axios").default;
-    
-    const api = new OpenAPIClientAxios({
-        definition: "http://localhost:8084/v3/api-docs",
-    });
-    api.init()
-        .then((client) =>
-            client.matricular({ rm: "200", idDisciplina: "200" })
-        )
-        .then((res) => console.log("Resultado:", res.data));
-    
-    ```
-***
-### Spring State Machine
-- Aluno pode solicitar o cancelamento de uma matrícula em determinada disciplina
-- Para isso, existe um *worflow* conforme abaixo
-![screenshot](img/wf.png)
-- Importar as dependências
-```xml
-<dependency>
-    <groupId>org.springframework.statemachine</groupId>
-    <artifactId>spring-statemachine-starter</artifactId>
-    <version>3.2.1</version>
-</dependency>
+```javascript
+const OpenAPIClientAxios = require("openapi-client-axios").default;
+
+const api = new OpenAPIClientAxios({
+    definition: "http://localhost:8080/v3/api-docs",
+});
+api.init()
+    .then((client) =>
+        client.cadastrar({}, { nome: "Teste Node", curso: "CDN", turma: "XPTO" })
+    )
+    .then((res) => console.log("Resultado:", res.data));
 ```
-- Criar os estados e eventos
-    ```java
-    public enum CancelamentoMatriculaEstado {
-        SOLICITADO, APROVADO_COORDENADOR, APROVADO_SECRETARIA
-    }
-    ```
-    ```java
-    public enum CancelamentoMatriculaEvento {
-        APROVAR_COORDENADOR, APROVAR_SECRETARIA
-    }
-    ```
-- A configuração da máquina de estados deve ser feita em uma classe anotada com `@Configuration` e `@EnableStateMachine`
-    ```java
-    @Configuration
-    @EnableStateMachineFactory
-    public class CancelamentoWorkflowConfig extends StateMachineConfigurerAdapter<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> {
-
-        private static final Logger logger = LoggerFactory.getLogger(CancelamentoWorkflowConfig.class);
-        
-    }
-    ```
-- Configurar os estados
-    ```java
-    @Override
-    public void configure(StateMachineStateConfigurer<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> states)
-            throws Exception {
-
-        states.withStates()
-                .initial(CancelamentoMatriculaEstado.SOLICITADO, initialAction())
-                .end(CancelamentoMatriculaEstado.APROVADO_SECRETARIA)
-                .state(CancelamentoMatriculaEstado.APROVADO_COORDENADOR);
-
-    }
-
-    @Bean
-    public Action<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> initialAction() {
-        return new Action<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento>() {
-
-            @Override
-            public void execute(StateContext<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> context) {
-                logger.info("Iniciado o WF Cancelamento de Matricula");
-            }
-        };
-    }
-    ```
-- Configurar as transições entre os estados
-    ```java    
-    @Override
-    public void configure(
-            StateMachineTransitionConfigurer<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> transitions)
-            throws Exception {
-
-        transitions.withExternal()
-                .source(CancelamentoMatriculaEstado.SOLICITADO).target(CancelamentoMatriculaEstado.APROVADO_COORDENADOR)
-                .event(CancelamentoMatriculaEvento.APROVAR_COORDENADOR)
-                .and()
-                .withExternal()
-                .source(CancelamentoMatriculaEstado.APROVADO_COORDENADOR)
-                .target(CancelamentoMatriculaEstado.APROVADO_SECRETARIA)
-                .event(CancelamentoMatriculaEvento.APROVAR_SECRETARIA);
-
-    }
-    ```
-- Definir as configurações gerais e o *listener* que será acionado quando houver uma transição entre os estados
-    ```java    
-    @Override
-    public void configure(
-            StateMachineConfigurationConfigurer<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> config)
-            throws Exception {
-
-        config.withConfiguration().autoStartup(true).listener(listener()).machineId("cancelamento-matricula");
-    }
-
-    @Bean
-    public StateMachineListener<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> listener() {
-        return new StateMachineListenerAdapter<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento>() {
-            @Override
-            public void stateChanged(State<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> from,
-                    State<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> to) {
-
-                logger.info("Estado alterado para: " + to.getId());
-            }
-        };
-    }
-    ```
-- Efetuar as transições de eventos entre os estados
-    ```java
-    @Service
-    public class FaculdadeServico {
-    
-        private static final Logger logger = LoggerFactory.getLogger(FaculdadeServico.class);
-    
-        @Autowired
-        private StateMachineFactory<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> cancelamentoFactory;
-    
-        private StateMachine<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> cancelamento;
-    
-        public CancelamentoMatriculaEstado solicitar() {
-            this.cancelamento = cancelamentoFactory.getStateMachine();
-            cancelamento.startReactively().block();
-            logger.info("Solicitado Cancelamento::UUID = " + cancelamento.getUuid().toString());
-            logger.info("Estado = " + cancelamento.getState().getId() + " - finalizado = " + cancelamento.isComplete());
-            return cancelamento.getState().getId();
-        }
-    
-        public CancelamentoMatriculaEstado aprovarCoordenador() {
-    
-            cancelamento
-                    .sendEvent(
-                            Mono.just(MessageBuilder.withPayload(CancelamentoMatriculaEvento.APROVAR_COORDENADOR).build()))
-                    .blockFirst();
-            logger.info("Estado = " + cancelamento.getState().getId() + " - finalizado = " + cancelamento.isComplete());
-            return cancelamento.getState().getId();
-    
-        }
-    
-        public CancelamentoMatriculaEstado aprovarSecretaria() {
-    
-            cancelamento
-                    .sendEvent(
-                            Mono.just(MessageBuilder.withPayload(CancelamentoMatriculaEvento.APROVAR_SECRETARIA).build()))
-                    .blockFirst();
-            cancelamento.stopReactively().block();
-            logger.info("Estado = " + cancelamento.getState().getId() + " - finalizado = " + cancelamento.isComplete());
-            return cancelamento.getState().getId();
-    
-        }
-    
-    }
-    ```
-- Finalmente, criar os *endpoints* para executar os eventos
-    ```java
-     @PutMapping("/matricula/cancelar/solicitar/{rm}/{idDisciplina}")
-    public ResponseEntity<CancelamentoMatriculaEstado> solicitarCancelamento(@PathVariable String rm,
-            @PathVariable String idDisciplina) {
-
-        return new ResponseEntity<CancelamentoMatriculaEstado>(faculdade.solicitar(), HttpStatus.OK);
-
-    }
-
-    @PutMapping("/matricula/cancelar/aprovar/coordenador/{rm}/{idDisciplina}")
-    public ResponseEntity<CancelamentoMatriculaEstado> aprovarCoordenador(@PathVariable String rm,
-            @PathVariable String idDisciplina) {
-        return new ResponseEntity<CancelamentoMatriculaEstado>(faculdade.aprovarCoordenador(), HttpStatus.OK);
-
-    }
-
-    @PutMapping("/matricula/cancelar/aprovar/secretaria/{rm}/{idDisciplina}")
-    public ResponseEntity<CancelamentoMatriculaEstado> aprovarSecretaria(@PathVariable String rm,
-            @PathVariable String idDisciplina) {
-        faculdade.aprovarSecretaria();
-        return new ResponseEntity<CancelamentoMatriculaEstado>(faculdade.aprovarSecretaria(), HttpStatus.OK);
-
-    }
-    ```
-- Ações podem ser executadas entre os estados associando uma `action` dentro da classe de configuração (Ex: `CancelamentoWorkflowConfig`)
-- No exemplo baxo são exibidas as variáveis que podem ser associadas na execução da ação
-    ```java
-    public void configure(
-        StateMachineTransitionConfigurer<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> transitions)
-        throws Exception {
-
-    transitions.withExternal()
-            .source(CancelamentoMatriculaEstado.SOLICITADO).target(CancelamentoMatriculaEstado.APROVADO_COORDENADOR)
-            .event(CancelamentoMatriculaEvento.APROVAR_COORDENADOR)
-            .and()
-            .withExternal()
-            .source(CancelamentoMatriculaEstado.APROVADO_COORDENADOR)
-            .target(CancelamentoMatriculaEstado.APROVADO_SECRETARIA)
-            .event(CancelamentoMatriculaEvento.APROVAR_SECRETARIA)
-            .action(ctx -> {
-                logger.info("Parametros: " + ctx.getStateMachine().getExtendedState().getVariables());
-            });
-
-    }
-    ```
-- Para associar variáveis, alterar a classe de serviços e incluir a variável por meio do `getExtendedState()`
-    ```java
-    public CancelamentoMatriculaEstado aprovarSecretaria() {
-
-    cancelamento.getExtendedState().getVariables().put("ID_ALUNO", "X");
-    
-    cancelamento
-            .sendEvent(
-                    Mono.just(MessageBuilder.withPayload(CancelamentoMatriculaEvento.APROVAR_SECRETARIA).build()))
-            .blockFirst();
-    cancelamento.stopReactively().block();
-    logger.info("Estado = " + cancelamento.getState().getId() + " - finalizado = " + cancelamento.isComplete());
-    return cancelamento.getState().getId();
-
-    }
-    ```
+***
 ## Actuator
 - Permite verificar a "saúde" (health) de um serviço, por exemplo, se ele está em execução, sua disponibilidade, configuração, etc...
 - Incluir a seguinte dependência ao projeto:
-    ```xml
-    <dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-actuator</artifactId>
-    </dependency>
-    ```
+```xml
+<dependency>
+<groupId>org.springframework.boot</groupId>
+<artifactId>spring-boot-starter-actuator</artifactId>
+</dependency>
+```
 - A porta do actuator pode ser alterada por meio da propriedade `management.server.port` (por exemplo, `8081`)
 - Acessar a URL `http://localhost:8081/actuator` ou `http://localhost:8081/actuator/health`
 - Para incluir maiores informações sobre as informações da disponibilidade dos serviços (*health*) basta ativar a configuração `management.endpoint.health.show-details=always`
@@ -1282,77 +1075,103 @@ npx openapicmd typegen http://localhost:8080/v3/api-docs > openapi.d.ts
 - Outros tipos podem ser visualizados [aqui](https://docs.spring.io/spring-boot/reference/actuator/endpoints.html)
 ### Health Check Personalizado
 - Um health check personalizado permite especificar quando um determinado serviço está acessível
-    ```java
-    @Component
-    public class AlunoMonitor implements HealthIndicator {
-    
-        @Override
-        public Health health() {
-            return Health.down().build();
-        }
-    
+```java
+@Component
+public class AlunoMonitor implements HealthIndicator {
+
+    @Override
+    public Health health() {
+        return Health.down().build();
     }
-    ```
+
+}
+```
 - Por exemplo, pode-se verificar se o banco de dados está disponível
-    ```java
-    @Component("dbFaculdade")
-    public class DatabaseHealthContributor
-            implements HealthIndicator {
-    
-        @Autowired
-        private DataSource ds;
-    
-        @Override
-        public Health health() {
-            try (Connection conn = ds.getConnection()) {
-                Statement stmt = conn.createStatement();
-                stmt.execute("select COUNT(*) from TAB_ALUNO");
-            } catch (SQLException ex) {
-                return Health.outOfService().withException(ex).build();
-            }
-            return Health.up().build();
-        }
+```java
+@Component("Aluno")
+public class AlunoMonitor implements HealthIndicator {
+
+    private DataSource ds;
+
+    public AlunoMonitor(DataSource ds) {
+        this.ds = ds;
     }
-    ```
+
+    @Override
+    public Health health() {
+        try (Connection conn = ds.getConnection()) {
+            Statement stmt = conn.createStatement();
+            stmt.execute("select COUNT(*) from TAB_ALUNO");
+        } catch (SQLException ex) {
+            return Health.outOfService().withException(ex).build();
+        }
+        return Health.up().build();
+    }
+
+}
+```
 ### Métricas
 - Para habilitar mais *endpoints* alterar `management.endpoints.web.exposure.include=*`
-- Exemplo de uma métrica persinalizada:
-    ```java
-    @Component
-    public class MetricaAluno {
-        MetricaAluno(MeterRegistry registry) {
-            registry.counter("total.alunos", Tags.of("teste", "10"));
-        }
+- Como são muitas informações, é possível filtrar por categorias `health,info,metrics`
+- As métricas podem ser obtidas no *endpoint* `/actuator/metrics`
+- Exemplo de uma métrica personalizada:
+```java
+@Component
+public class AlunoMetrica {
+    AlunoMetrica(MeterRegistry registry) {
+        registry.counter("alunos.criados", Tags.of("teste", "10"));
     }
-    ```
-- As métricas podem ser acessadas no *endpoint* `metrics`
+}
+```
+- Melhorando as métricas para aluno
+```java
+@Component
+public class AlunoMetrica {
+
+    private final Counter alunosCriados;
+
+    public AlunoMetrica(MeterRegistry registry) {
+        alunosCriados = Counter.builder("alunos.criados")
+                .description("Quantidade de alunos criados")
+                .register(registry);
+    }
+
+    public void alunoCriado() {
+        alunosCriados.increment();
+    }
+}
+```
+- Alterar a classe `AlunoController` para incrementar a métrica de alunos criados via injeção de dependência via método construtor
 ### Informações
 - Algumas configurações podem ser habilitadas:
-    ```java
-    management.info.java.enabled=true
-    info.app.name=@project.name@
-    info.app.description=@project.description@
-    info.app.version=@project.version@
-    info.app.encoding=@project.build.sourceEncoding@
-    info.app.java.version=@java.version@
-    ```
-### Configurando o Prometheus
+```java
+management.info.java.enabled=true
+info.app.name=@project.name@
+info.app.description=@project.description@
+info.app.version=@project.version@
+info.app.encoding=@project.build.sourceEncoding@
+info.app.java.version=@java.version@
+```
+- Os vários simbolos `@...@` vão corresponder às propriedades definidas no `pom.xml` (**maven**)
+```xml
+<project>
+    <groupId>br.com.faculdade</groupId>
+    <artifactId>aluno-service</artifactId>
+    <version>1.0.0</version>
+    <name>Aluno Service</name>
+    <description>Microserviço responsável pelo gerenciamento de alunos</description>
+</project>
+```
+***
+### Prometheus
+- Permite acompanhar as evolução das métricas na linha do tempo
 - Instalar o [prometheus](https://prometheus.io/download/)
 - Ou obter a imagem e iniciar um container do *Prometheus*
-    ```shell
-    docker login docker.io
-    docker run -p 9095:9090 -v ./prometheus-config.yml:/etc/prometheus/prometheus.yml --name prometheus prom/prometheus
-    ```
-- Incluir a dependência
-    ```xml
-    <dependency>
-    <groupId>io.micrometer</groupId>
-    <artifactId>micrometer-registry-prometheus</artifactId>
-    </dependency>
-    ```
-- Habilitar o *endpoint* do *Prometheus* com a propriedade `management.endpoints.web.exposure.include=prometheus`
-- Acessar o *endpoint* `http://localhost:8081/actuator/prometheus`
-- Criar um arquivo *yaml* para configurar o *Prometheus* com o nome `prometheus-config.yml`
+```bash
+docker login docker.io
+docker run -p 9095:9090 -v ./prometheus.yml:/etc/prometheus/prometheus.yml --name prometheus prom/prometheus
+```
+- Criar / alterar o arquivo *yaml* para configurar o *Prometheus* com o nome `prometheus.yml`
 ```yaml
 global:
     scrape_interval:     15s
@@ -1362,59 +1181,189 @@ scrape_configs:
       metrics_path: '/actuator/prometheus'
       scrape_interval: 5s
       static_configs:
-        - targets: ["substituir_hostname:8081"]
+        - targets: ["localhost:9099"]
 ```
-- Acessar na URL `http://localhost:9090/targets`
+- Com isso a interface de consulta do **prometheus** estará acessível em `http://localhost:9090/query`
+- Incluir a dependência no *miscrosserviço* para gerar as métricas
+```xml
+<dependency>
+<groupId>io.micrometer</groupId>
+<artifactId>micrometer-registry-prometheus</artifactId>
+</dependency>
+```
+- Habilitar o *endpoint* do *Prometheus* com a propriedade `management.endpoints.web.exposure.include=prometheus`
+- Acessar o *endpoint* `http://localhost:9099/actuator/prometheus`
+- Acessar na URL `http://localhost:9090`
+- Eftuar as consultas:
+    - `up`
+    - `jvm_memory_used_bytes`
+    - `system_cpu_usage`
+    - `http_server_requests_seconds`
+    - `http_server_requests_seconds_count`
+    - `http_server_requests`
+    - `sum(http_server_requests_seconds_count)`
+    - `alunos_criados_total`
+- Consultas mais complexas
+```javascript
+http_server_requests_seconds_count{
+    method="GET",
+    status="200",
+    uri="/alunos"
+}
+
+sum by (uri) (http_server_requests_seconds_count)
+
+sum(rate(http_server_requests_seconds_count[5m]))
+
+sum(
+  rate(http_server_requests_seconds_count{
+    status=~"5.."
+  }[5m])
+)
+
+sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+/
+sum(rate(http_server_requests_seconds_count[5m]))
+
+rate(http_server_requests_seconds_sum[5m])
+/
+rate(http_server_requests_seconds_count[5m])
+```
+### Grafana
+
+- Efetuar o *download* [aqui](https://grafana.com/grafana/download?edition=oss)
+- Iniciar o **grafana**
+```bash
+cd grafana/bin
+grafana server
+```
+- Acessar a url `http://localhost:3000`
+- Usuário e senha iniciais: `admin` / `admin`
+- Criar a conexão com o **prometheus** na url `http://localhost:9090`
+***
+### Loki
+- Logs devem ser criados com 
+```java
+private static final Logger log = LoggerFactory.getLogger(AlunoService.class);
+...
+log.info("Serviço iniciado...");
+```
+- Definir o caminho dos *logs* na aplicação `logging.file.name=logs/aluno-service.log`
+- Efetuar o download [aqui](https://github.com/grafana/loki/releases/)
+- Criar o arquivo `config.yaml`
+```yml
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  grpc_listen_port: 9096
+
+common:
+  instance_addr: 127.0.0.1
+  path_prefix: ./loki-data
+
+  storage:
+    filesystem:
+      chunks_directory: ./loki-data/chunks
+      rules_directory: ./loki-data/rules
+
+  replication_factor: 1
+
+  ring:
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: 2024-01-01
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+ruler:
+  alertmanager_url: http://localhost:9093
+```
+- Efetuar o download do Alloy [aqui](https://github.com/grafana/alloy/releases/tag/v1.20.1)
+- Criar o arquivo de configuração (`config.alloy`)
+```javascript
+loki.source.file "aluno_service" {
+  targets = [
+    {
+      __path__     = "/Users/esensato/projetos/aluno-service/logs/*.log",
+      service     = "aluno-service",
+      environment = "dev",
+    },
+  ]
+
+  forward_to = [loki.write.local.receiver]
+
+  file_match {
+    enabled = true
+  }
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://localhost:3100/loki/api/v1/push"
+  }
+}
+
+```
+
 ### Spring Admin Server
 - É uma interface web para administração das aplicações *Spring Boot*
-- Criar um novo projeto *Sprint Boot* e adicionar as dependências:
-    ```xml
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter</artifactId>
-    </dependency>
-    
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-web</artifactId>
-    </dependency>
-    
-    <dependency>
-        <groupId>de.codecentric</groupId>
-        <artifactId>spring-boot-admin-starter-server</artifactId>
-        <version>3.1.5</version>
-    </dependency>
-    ```
+- Criar um NOVO projeto *Sprint Boot* e adicionar as dependências:
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter</artifactId>
+</dependency>
+
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-web</artifactId>
+</dependency>
+
+<dependency>
+    <groupId>de.codecentric</groupId>
+    <artifactId>spring-boot-admin-starter-server</artifactId>
+    <version>3.1.5</version>
+</dependency>
+```
 - Especificamente para o **MacOS**
-    ```xml
-    <dependency>
-        <groupId>io.netty</groupId>
-        <artifactId>netty-all</artifactId>
-    </dependency>
-    ```
+```xml
+<dependency>
+    <groupId>io.netty</groupId>
+    <artifactId>netty-all</artifactId>
+</dependency>
+```
 - Especificar a porta na qual o *Admin Server* irá executar: `server.port=8082`
 - Na classe principal do projeto adicionar as seguintes anotações:
-    ```java
-    @EnableAdminServer
-    @SpringBootApplication
-    public class AdminApplication {
-    
-    	public static void main(String[] args) {
-    		SpringApplication.run(AdminApplication.class, args);
-    	}
-    
+```java
+@EnableAdminServer
+@SpringBootApplication
+public class AdminApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(AdminApplication.class, args);
     }
-    ```
+
+}
+```
 - Acessar a interface administrativa: `http://localhost:8082`
 - Registrar as aplicações que serão monitoradas, adicionando a dependência:
-    ```xml
-    <dependency>
-        <groupId>de.codecentric</groupId>
-        <artifactId>spring-boot-admin-starter-client</artifactId>
-        <version>3.1.5</version>
-    </dependency>
-    ```
+```xml
+<dependency>
+    <groupId>de.codecentric</groupId>
+    <artifactId>spring-boot-admin-starter-client</artifactId>
+    <version>3.1.5</version>
+</dependency>
+```
 - Apontar para o *Admin Server* com as propriedades `spring.boot.admin.client.url=http://localhost:8082` e `management.endpoint.health.show-details=always`
+***
 ## Segurança Básica
 - Para garantir um nível de segurança mínimo para os *endpoints* é possível ativar um *starter*
 ```xml
@@ -2718,3 +2667,208 @@ private KafkaTemplate<String, Object> kafkaTemplate;
 ```
     docker run -d -p 8080:8080 --name producer kafka-producer
 ```
+***
+### Spring State Machine
+- Aluno pode solicitar o cancelamento de uma matrícula em determinada disciplina
+- Para isso, existe um *worflow* conforme abaixo
+![screenshot](img/wf.png)
+- Importar as dependências
+```xml
+<dependency>
+    <groupId>org.springframework.statemachine</groupId>
+    <artifactId>spring-statemachine-starter</artifactId>
+    <version>3.2.1</version>
+</dependency>
+```
+- Criar os estados e eventos
+    ```java
+    public enum CancelamentoMatriculaEstado {
+        SOLICITADO, APROVADO_COORDENADOR, APROVADO_SECRETARIA
+    }
+    ```
+    ```java
+    public enum CancelamentoMatriculaEvento {
+        APROVAR_COORDENADOR, APROVAR_SECRETARIA
+    }
+    ```
+- A configuração da máquina de estados deve ser feita em uma classe anotada com `@Configuration` e `@EnableStateMachine`
+    ```java
+    @Configuration
+    @EnableStateMachineFactory
+    public class CancelamentoWorkflowConfig extends StateMachineConfigurerAdapter<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> {
+
+        private static final Logger logger = LoggerFactory.getLogger(CancelamentoWorkflowConfig.class);
+        
+    }
+    ```
+- Configurar os estados
+    ```java
+    @Override
+    public void configure(StateMachineStateConfigurer<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> states)
+            throws Exception {
+
+        states.withStates()
+                .initial(CancelamentoMatriculaEstado.SOLICITADO, initialAction())
+                .end(CancelamentoMatriculaEstado.APROVADO_SECRETARIA)
+                .state(CancelamentoMatriculaEstado.APROVADO_COORDENADOR);
+
+    }
+
+    @Bean
+    public Action<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> initialAction() {
+        return new Action<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento>() {
+
+            @Override
+            public void execute(StateContext<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> context) {
+                logger.info("Iniciado o WF Cancelamento de Matricula");
+            }
+        };
+    }
+    ```
+- Configurar as transições entre os estados
+    ```java    
+    @Override
+    public void configure(
+            StateMachineTransitionConfigurer<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> transitions)
+            throws Exception {
+
+        transitions.withExternal()
+                .source(CancelamentoMatriculaEstado.SOLICITADO).target(CancelamentoMatriculaEstado.APROVADO_COORDENADOR)
+                .event(CancelamentoMatriculaEvento.APROVAR_COORDENADOR)
+                .and()
+                .withExternal()
+                .source(CancelamentoMatriculaEstado.APROVADO_COORDENADOR)
+                .target(CancelamentoMatriculaEstado.APROVADO_SECRETARIA)
+                .event(CancelamentoMatriculaEvento.APROVAR_SECRETARIA);
+
+    }
+    ```
+- Definir as configurações gerais e o *listener* que será acionado quando houver uma transição entre os estados
+    ```java    
+    @Override
+    public void configure(
+            StateMachineConfigurationConfigurer<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> config)
+            throws Exception {
+
+        config.withConfiguration().autoStartup(true).listener(listener()).machineId("cancelamento-matricula");
+    }
+
+    @Bean
+    public StateMachineListener<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> listener() {
+        return new StateMachineListenerAdapter<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento>() {
+            @Override
+            public void stateChanged(State<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> from,
+                    State<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> to) {
+
+                logger.info("Estado alterado para: " + to.getId());
+            }
+        };
+    }
+    ```
+- Efetuar as transições de eventos entre os estados
+    ```java
+    @Service
+    public class FaculdadeServico {
+    
+        private static final Logger logger = LoggerFactory.getLogger(FaculdadeServico.class);
+    
+        @Autowired
+        private StateMachineFactory<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> cancelamentoFactory;
+    
+        private StateMachine<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> cancelamento;
+    
+        public CancelamentoMatriculaEstado solicitar() {
+            this.cancelamento = cancelamentoFactory.getStateMachine();
+            cancelamento.startReactively().block();
+            logger.info("Solicitado Cancelamento::UUID = " + cancelamento.getUuid().toString());
+            logger.info("Estado = " + cancelamento.getState().getId() + " - finalizado = " + cancelamento.isComplete());
+            return cancelamento.getState().getId();
+        }
+    
+        public CancelamentoMatriculaEstado aprovarCoordenador() {
+    
+            cancelamento
+                    .sendEvent(
+                            Mono.just(MessageBuilder.withPayload(CancelamentoMatriculaEvento.APROVAR_COORDENADOR).build()))
+                    .blockFirst();
+            logger.info("Estado = " + cancelamento.getState().getId() + " - finalizado = " + cancelamento.isComplete());
+            return cancelamento.getState().getId();
+    
+        }
+    
+        public CancelamentoMatriculaEstado aprovarSecretaria() {
+    
+            cancelamento
+                    .sendEvent(
+                            Mono.just(MessageBuilder.withPayload(CancelamentoMatriculaEvento.APROVAR_SECRETARIA).build()))
+                    .blockFirst();
+            cancelamento.stopReactively().block();
+            logger.info("Estado = " + cancelamento.getState().getId() + " - finalizado = " + cancelamento.isComplete());
+            return cancelamento.getState().getId();
+    
+        }
+    
+    }
+    ```
+- Finalmente, criar os *endpoints* para executar os eventos
+    ```java
+     @PutMapping("/matricula/cancelar/solicitar/{rm}/{idDisciplina}")
+    public ResponseEntity<CancelamentoMatriculaEstado> solicitarCancelamento(@PathVariable String rm,
+            @PathVariable String idDisciplina) {
+
+        return new ResponseEntity<CancelamentoMatriculaEstado>(faculdade.solicitar(), HttpStatus.OK);
+
+    }
+
+    @PutMapping("/matricula/cancelar/aprovar/coordenador/{rm}/{idDisciplina}")
+    public ResponseEntity<CancelamentoMatriculaEstado> aprovarCoordenador(@PathVariable String rm,
+            @PathVariable String idDisciplina) {
+        return new ResponseEntity<CancelamentoMatriculaEstado>(faculdade.aprovarCoordenador(), HttpStatus.OK);
+
+    }
+
+    @PutMapping("/matricula/cancelar/aprovar/secretaria/{rm}/{idDisciplina}")
+    public ResponseEntity<CancelamentoMatriculaEstado> aprovarSecretaria(@PathVariable String rm,
+            @PathVariable String idDisciplina) {
+        faculdade.aprovarSecretaria();
+        return new ResponseEntity<CancelamentoMatriculaEstado>(faculdade.aprovarSecretaria(), HttpStatus.OK);
+
+    }
+    ```
+- Ações podem ser executadas entre os estados associando uma `action` dentro da classe de configuração (Ex: `CancelamentoWorkflowConfig`)
+- No exemplo baxo são exibidas as variáveis que podem ser associadas na execução da ação
+    ```java
+    public void configure(
+        StateMachineTransitionConfigurer<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> transitions)
+        throws Exception {
+
+    transitions.withExternal()
+            .source(CancelamentoMatriculaEstado.SOLICITADO).target(CancelamentoMatriculaEstado.APROVADO_COORDENADOR)
+            .event(CancelamentoMatriculaEvento.APROVAR_COORDENADOR)
+            .and()
+            .withExternal()
+            .source(CancelamentoMatriculaEstado.APROVADO_COORDENADOR)
+            .target(CancelamentoMatriculaEstado.APROVADO_SECRETARIA)
+            .event(CancelamentoMatriculaEvento.APROVAR_SECRETARIA)
+            .action(ctx -> {
+                logger.info("Parametros: " + ctx.getStateMachine().getExtendedState().getVariables());
+            });
+
+    }
+    ```
+- Para associar variáveis, alterar a classe de serviços e incluir a variável por meio do `getExtendedState()`
+    ```java
+    public CancelamentoMatriculaEstado aprovarSecretaria() {
+
+    cancelamento.getExtendedState().getVariables().put("ID_ALUNO", "X");
+    
+    cancelamento
+            .sendEvent(
+                    Mono.just(MessageBuilder.withPayload(CancelamentoMatriculaEvento.APROVAR_SECRETARIA).build()))
+            .blockFirst();
+    cancelamento.stopReactively().block();
+    logger.info("Estado = " + cancelamento.getState().getId() + " - finalizado = " + cancelamento.isComplete());
+    return cancelamento.getState().getId();
+
+    }
+    ```
