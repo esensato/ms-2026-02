@@ -1,5 +1,6 @@
 package aula.microservicos.aluno.restful;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -9,6 +10,7 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+@Schema(name = "Aluno", description = "Representa um aluno")
 @Entity
 @Table(name = "TAB_ALUNO")
 public class Aluno {
@@ -23,6 +25,7 @@ public class Aluno {
     @NotNull(message = "O campo curso não pode ser nulo")
     public String curso;
 
+    @Schema(name = "turma", description = "Turma do aluno", example = "T001")
     public String turma;
 
 }

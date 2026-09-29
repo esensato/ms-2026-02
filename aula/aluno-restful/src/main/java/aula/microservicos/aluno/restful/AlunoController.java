@@ -8,6 +8,15 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.swagger.v3.oas.annotations.OpenAPIDefinition;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Parameters;
+import io.swagger.v3.oas.annotations.info.Info;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -16,6 +25,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PutMapping;
 
+@OpenAPIDefinition(info = @Info(title = "Controle de Alunos"))
 @RestController
 @RequestMapping("/aluno")
 public class AlunoController {
@@ -29,6 +39,8 @@ public class AlunoController {
 
     // GET - http://localhost:8080/aluno
     // obter a lista (Iterable) de todos os alunos cadastrados
+    @Operation(summary = "Lista alunos", description = "Obtem a lista de todos os alunos", tags = { "alunos" })
+    @Parameters(value = { @Parameter(name = "id", description = "id do aluno") })
     @GetMapping
     public ResponseEntity<Iterable<Aluno>> getAluno() {
 
@@ -47,6 +59,11 @@ public class AlunoController {
 
     // http://localhost:8080/aluno/1
     // retorna aluno com id = 1
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Encontrou o aluno", content = {
+                    @Content(mediaType = "application/json", schema = @Schema(implementation = Aluno.class)) }),
+            @ApiResponse(responseCode = "400", description = "Id do aluno inválido", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Aluno não localizado", content = @Content) })
     @GetMapping("{id}")
     public ResponseEntity<Aluno> getAluno(@PathVariable Integer id) {
 
