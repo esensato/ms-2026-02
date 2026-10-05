@@ -1330,7 +1330,7 @@ loki.write "local" {
 <dependency>
     <groupId>de.codecentric</groupId>
     <artifactId>spring-boot-admin-starter-server</artifactId>
-    <version>3.1.5</version>
+    <version>4.1.3</version>
 </dependency>
 ```
 - Especificamente para o **MacOS**
@@ -1340,7 +1340,7 @@ loki.write "local" {
     <artifactId>netty-all</artifactId>
 </dependency>
 ```
-- Especificar a porta na qual o *Admin Server* irá executar: `server.port=8082`
+- Especificar a porta na qual o *Admin Server* irá executar: `server.port=9082`
 - Na classe principal do projeto adicionar as seguintes anotações:
 ```java
 @EnableAdminServer
@@ -1353,16 +1353,16 @@ public class AdminApplication {
 
 }
 ```
-- Acessar a interface administrativa: `http://localhost:8082`
+- Acessar a interface administrativa: `http://localhost:9082`
 - Registrar as aplicações que serão monitoradas, adicionando a dependência:
 ```xml
 <dependency>
     <groupId>de.codecentric</groupId>
     <artifactId>spring-boot-admin-starter-client</artifactId>
-    <version>3.1.5</version>
+    <version>4.1.3</version>
 </dependency>
 ```
-- Apontar para o *Admin Server* com as propriedades `spring.boot.admin.client.url=http://localhost:8082` e `management.endpoint.health.show-details=always`
+- Apontar para o *Admin Server* com as propriedades `spring.boot.admin.client.url=http://localhost:9082` e `management.endpoint.health.show-details=always`
 ***
 ## Segurança Básica
 - Para garantir um nível de segurança mínimo para os *endpoints* é possível ativar um *starter*
@@ -1378,24 +1378,35 @@ public class AdminApplication {
 
 - Por padrão o usuário definido é *user*
 - Ao tentar acessar qualquer *endpoint* sem fornecer as credenciais será gerado um erro HTTP 401 (Unauthorized)
-- Para que seja autorizado o acesso deve-se definir no cabeçalho da requisição o tipo de Autorização *Basic*
+- Para que seja autorizado o acesso deve-se definir no cabeçalho da requisição o tipo de Autorização *Basic* (`Authorization: Basic user:senha` - `user:senha` em *Base64*)
 - Caso seja necessário fornecer um usuário e senha padrão basta editar o `application.properties` e definir as seguintes propriedades:
 ```javascript
 spring.security.user.name = teste
 spring.security.user.password = 123
 ```
 ### Cross Site Request Forgery (CSRF)
-- É uma proteção de segurança que impede que serviços hospedados em servidores distintos sejam acessados mutuamente
-- Para desabilitar o *CSRF*:
+- Cross-Site Request Forgery é um ataque em que um usuário autenticado pode ser induzido a realizar uma operação em uma aplicação sem perceber
+- Para desabilitar o *CSRF* e *session*:
 ```java
-@Configuration
-public class SecurityConfig extends WebSecurityConfigurerAdapter {
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.SecurityFilterChain;
 
-    @Override
-    protected void configure(HttpSecurity http) throws Exception {
-       super.configure(http);
-       http.csrf().disable();
+@Configuration
+public class SecurityConfig {
+
+    @Bean
+    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
+        http.csrf(csrf -> csrf.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth.anyRequest().authenticated());
+        return http.build();
+
     }
+
 }
 ```
 ## Personalizando a Segurança
@@ -1409,9 +1420,11 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain defauSecurityFilterChain(HttpSecurity http) throws Exception {
 
-        http.authorizeHttpRequests((requests) -> requests.anyRequest().authenticated());
-        http.formLogin(withDefaults());
-        http.httpBasic(withDefaults());
+        http.csrf(csrf -> csrf.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .formLogin(withDefaults())
+                .httpBasic(withDefaults())
+                .authorizeHttpRequests(auth -> auth.anyRequest().authenticated());
 
         return http.build();
     }
@@ -1424,7 +1437,7 @@ public class SecurityConfig {
     - `permitAll()`
 - Para *enspoints* específicos utilizar o `requestMatchers` ao invés de `anyRequest`
 ```java
-http.authorizeHttpRequests((requests) -> requests.requestMatchers("/seguranca/info").permitAll());
+http.authorizeHttpRequests((requests) -> requests.requestMatchers("/aluno/info").permitAll());
 ```
 - Para desabilitar o formulário de *login* padrão (neste caso a tela de login será de responsabilidade do navegador)
 ```java
@@ -1441,22 +1454,145 @@ String plainCreds = "teste:123";
 byte[] plainCredsBytes = plainCreds.getBytes();
 byte[] base64CredsBytes = Base64.getEncoder().encode(plainCredsBytes);
 String base64Creds = new String(base64CredsBytes);
-ResponseEntity<AlunoBean> response = restClient.get()
-                .uri("http://localhost:8080/aluno/{idAluno}", idAluno)
+ResponseEntity<String> response = restClient.get()
+                .uri("http://localhost:8080/aluno/listar")
                 .header("Authorization", "Basic " + base64Creds)
                 .retrieve()
-                .toEntity(AlunoBean.class);
+                .toEntity(String.class);
 ```
-- Utilizando o **OpenFeign**
+- Para utilizar o **OpenFeign** é necessário criar uma classe para interceptar a requisição e inserir a autenticação
 ```java
-@FeignClient(name = "testeClient", url = "http://usuario:senha@localhost:8080")
-public interface FaculdadeInfo {
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
-    @GetMapping("/faculdade/info")
-    String getInfo();
+import feign.auth.BasicAuthRequestInterceptor;
+
+@Configuration
+public class FeignConfig {
+
+    @Bean
+    public BasicAuthRequestInterceptor basicAuthRequestInterceptor() {
+        return new BasicAuthRequestInterceptor("user", "440c9d66-141b-464d-97c8-e7891d126781");
+    }
+}
+```
+- Então a chamada deve incluir um parâmetro `configuration`
+```java
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+
+@FeignClient(name = "aluno", url = "${url}", configuration = FeignConfig.class)
+public interface AlunoClient {
+
+    @GetMapping("/aluno/listar")
+    public ResponseEntity<String> listar();
 
 }
 ```
+- Melhorar a implementação deixando o usuário e senha no arquivo `application.properties`
+```javascript
+faculdade.api.url=http://localhost:8080
+faculdade.api.username=user
+faculdade.api.password=440c9d66-141b-464d-97c8-e7891d126781
+```
+- Criar uma classe de configuração
+```java
+@ConfigurationProperties(prefix = "faculdade.api")
+public record FaculdadeApiProperties(
+        String url,
+        String username,
+        String password) {
+}
+```
+- Utilizar a classe de configuração
+```java
+@Configuration
+@EnableConfigurationProperties(FaculdadeApiProperties.class)
+public class FeignConfig {
+
+    @Bean
+    public BasicAuthRequestInterceptor basicAuthRequestInterceptor(
+            FaculdadeApiProperties properties) {
+
+        return new BasicAuthRequestInterceptor(
+                properties.username(),
+                properties.password()
+        );
+    }
+}
+```
+### CORS
+- Criar uma aplicação web simples para efetuar uma requisição GET ao *endpoint* `http://localhost:8080/aluno/listar`
+- Código **Nodejs**
+```javascript
+const express = require("express");
+const path = require("path");
+
+const app = express();
+
+app.use(express.static(path.join(__dirname, "public")));
+
+app.listen(3000, () => {
+    console.log("Aplicação disponível em http://localhost:3000");
+});
+```
+- Página `public/index.html`
+```html
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Teste CORS</title>
+</head>
+
+<body>
+
+    <button onclick="consultar()">Consultar API</button>
+
+    <h2 id="resultado"></h2>
+
+    <script>
+        async function consultar() {
+
+            const resultado = document.getElementById("resultado");
+
+            try {
+
+                const response = await fetch("http://localhost:8080/aluno/listar");
+                resultado.textContent = `HTTP ${response.status}`;
+
+            } catch (error) {
+
+                resultado.textContent = "Erro de CORS";
+                console.error(error);
+            }
+        }
+    </script>
+
+</body>
+
+</html>
+```
+- Inicialmente permitir todos os acessos `configuration.setAllowedOrigins(List.of("*"))`
+```java
+@Bean
+CorsConfigurationSource corsConfigurationSource() {
+
+    CorsConfiguration configuration = new CorsConfiguration();
+
+    configuration.setAllowedOrigins(List.of("*"));
+    configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+    configuration.setAllowedHeaders(List.of("*"));
+
+    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/**",configuration);
+
+    return source;
+}
+```
+- Depois bloquear o acesso pelo site `configuration.setAllowedOrigins(List.of("http://localhost:8080"))`
 #### Definindo Usuários em Memória
 - Remover as propriedades padrão `spring.security.user.name` e `spring.security.user.password` do `application.properties`
 - Na classe `SecurityConfig` adicionar o *bean* `userDetailsService`
@@ -1486,7 +1622,7 @@ public PasswordEncoder passwordEncoder() {
     return encoder;
 }
 ```
-- Remover a opção `{noop}` e informar a senha no formato [BCrypt](https://bcrypt-generator.com/)
+- Trocar a opção `{noop}` por `{bcrypt}`e informar a senha no formato [BCrypt](https://bcrypt-generator.com/)
 #### Definindo Usuários em Banco de Dados (JDBC)
 - Incluir a dependência:
 ```xml
