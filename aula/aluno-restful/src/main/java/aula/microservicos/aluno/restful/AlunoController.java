@@ -31,10 +31,12 @@ import org.springframework.web.bind.annotation.PutMapping;
 public class AlunoController {
 
     private final AlunoRepository repo;
+    private AlunoMetrica metrica;
 
     // Injeção de dependência do AlunoRepository
-    public AlunoController(AlunoRepository repo) {
+    public AlunoController(AlunoRepository repo, AlunoMetrica metrica) {
         this.repo = repo;
+        this.metrica = metrica;
     }
 
     // GET - http://localhost:8080/aluno
@@ -83,6 +85,7 @@ public class AlunoController {
     public ResponseEntity<Aluno> cadastro(@Valid @RequestBody Aluno aluno) {
 
         repo.save(aluno);
+        metrica.alunoCriado();
         // if (aluno.nome.length() > 30) {
         // return new ResponseEntity<Aluno>(new Aluno(), HttpStatus.BAD_REQUEST);
         // } else {

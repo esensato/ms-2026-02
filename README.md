@@ -1310,8 +1310,8 @@ loki.write "local" {
     url = "http://localhost:3100/loki/api/v1/push"
   }
 }
-
 ```
+- Iniciar o **alloy** com `alloy.exe run config.alloy`
 
 ### Spring Admin Server
 - É uma interface web para administração das aplicações *Spring Boot*
@@ -1372,7 +1372,7 @@ public class AdminApplication {
 <artifactId>spring-boot-starter-security</artifactId>
 </dependency>
 ```
-- Observar após o início do serviço que é getada uma senha automaticamnte para acesso:
+- Observar após o início do serviço que é gerada uma senha automaticamnte para acesso:
 
 `Using generated security password: 2cee0e0c-3e35-453d-ac8b-f3f040c849cf`
 
@@ -1383,6 +1383,29 @@ public class AdminApplication {
 ```javascript
 spring.security.user.name = teste
 spring.security.user.password = 123
+```
+- Para sobrescrever as propriedades padrão do **starter security** é necessário criar uma classe de configuração
+```java
+package local.microservicos.local.alunorestful;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.web.SecurityFilterChain;
+import static org.springframework.security.config.Customizer.withDefaults;
+
+@Configuration
+public class SecurityConfig {
+
+    @Bean
+    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
+        http.httpBasic(withDefaults())
+                .authorizeHttpRequests(auth -> auth.anyRequest().authenticated());
+        return http.build();
+
+    }
+}
 ```
 ### Cross Site Request Forgery (CSRF)
 - Cross-Site Request Forgery é um ataque em que um usuário autenticado pode ser induzido a realizar uma operação em uma aplicação sem perceber
@@ -1402,13 +1425,84 @@ public class SecurityConfig {
 
         http.csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth.anyRequest().authenticated());
+
         return http.build();
 
     }
 
 }
 ```
+### CORS
+- Criar uma aplicação web simples para efetuar uma requisição GET ao *endpoint* `http://localhost:8080/aluno/listar`
+- Código **Nodejs**
+```javascript
+const express = require("express");
+const path = require("path");
+
+const app = express();
+
+app.use(express.static(path.join(__dirname, "public")));
+
+app.listen(3000, () => {
+    console.log("Aplicação disponível em http://localhost:3000");
+});
+```
+- Página `public/index.html`
+```html
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Teste CORS</title>
+</head>
+
+<body>
+
+    <button onclick="consultar()">Consultar API</button>
+
+    <h2 id="resultado"></h2>
+
+    <script>
+        async function consultar() {
+
+            const resultado = document.getElementById("resultado");
+
+            try {
+
+                const response = await fetch("http://localhost:8080/aluno/listar");
+                resultado.textContent = `HTTP ${response.status}`;
+
+            } catch (error) {
+
+                resultado.textContent = "Erro de CORS";
+                console.error(error);
+            }
+        }
+    </script>
+
+</body>
+
+</html>
+```
+- Inicialmente permitir todos os acessos `configuration.setAllowedOrigins(List.of("*"))`
+```java
+@Bean
+CorsConfigurationSource corsConfigurationSource() {
+
+    CorsConfiguration configuration = new CorsConfiguration();
+
+    configuration.setAllowedOrigins(List.of("*"));
+    configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+    configuration.setAllowedHeaders(List.of("*"));
+
+    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/**",configuration);
+
+    return source;
+}
+```
+- Depois bloquear o acesso pelo site `configuration.setAllowedOrigins(List.of("http://localhost:8080"))`
 ## Personalizando a Segurança
 - Configuração básica (*default*)
 ```java
@@ -1437,7 +1531,8 @@ public class SecurityConfig {
     - `permitAll()`
 - Para *enspoints* específicos utilizar o `requestMatchers` ao invés de `anyRequest`
 ```java
-http.authorizeHttpRequests((requests) -> requests.requestMatchers("/aluno/info").permitAll());
+http.authorizeHttpRequests(auth -> auth.requestMatchers("/aluno/info").permitAll())
+.anyRequest().denyAll());
 ```
 - Para desabilitar o formulário de *login* padrão (neste caso a tela de login será de responsabilidade do navegador)
 ```java
@@ -1512,8 +1607,7 @@ public record FaculdadeApiProperties(
 public class FeignConfig {
 
     @Bean
-    public BasicAuthRequestInterceptor basicAuthRequestInterceptor(
-            FaculdadeApiProperties properties) {
+    public BasicAuthRequestInterceptor basicAuthRequestInterceptor(FaculdadeApiProperties properties) {
 
         return new BasicAuthRequestInterceptor(
                 properties.username(),
@@ -1522,77 +1616,6 @@ public class FeignConfig {
     }
 }
 ```
-### CORS
-- Criar uma aplicação web simples para efetuar uma requisição GET ao *endpoint* `http://localhost:8080/aluno/listar`
-- Código **Nodejs**
-```javascript
-const express = require("express");
-const path = require("path");
-
-const app = express();
-
-app.use(express.static(path.join(__dirname, "public")));
-
-app.listen(3000, () => {
-    console.log("Aplicação disponível em http://localhost:3000");
-});
-```
-- Página `public/index.html`
-```html
-<!DOCTYPE html>
-<html lang="pt-BR">
-
-<head>
-    <meta charset="UTF-8">
-    <title>Teste CORS</title>
-</head>
-
-<body>
-
-    <button onclick="consultar()">Consultar API</button>
-
-    <h2 id="resultado"></h2>
-
-    <script>
-        async function consultar() {
-
-            const resultado = document.getElementById("resultado");
-
-            try {
-
-                const response = await fetch("http://localhost:8080/aluno/listar");
-                resultado.textContent = `HTTP ${response.status}`;
-
-            } catch (error) {
-
-                resultado.textContent = "Erro de CORS";
-                console.error(error);
-            }
-        }
-    </script>
-
-</body>
-
-</html>
-```
-- Inicialmente permitir todos os acessos `configuration.setAllowedOrigins(List.of("*"))`
-```java
-@Bean
-CorsConfigurationSource corsConfigurationSource() {
-
-    CorsConfiguration configuration = new CorsConfiguration();
-
-    configuration.setAllowedOrigins(List.of("*"));
-    configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-    configuration.setAllowedHeaders(List.of("*"));
-
-    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-    source.registerCorsConfiguration("/**",configuration);
-
-    return source;
-}
-```
-- Depois bloquear o acesso pelo site `configuration.setAllowedOrigins(List.of("http://localhost:8080"))`
 #### Definindo Usuários em Memória
 - Remover as propriedades padrão `spring.security.user.name` e `spring.security.user.password` do `application.properties`
 - Na classe `SecurityConfig` adicionar o *bean* `userDetailsService`
@@ -1763,100 +1786,207 @@ public class AuthorizationEvent {
 }
 ```
 #### Tokens JWT
-- Importar
+- Importar as dependências para a geração do **token JWT**
 ```xml
-<dependency>
-    <groupId>io.jsonwebtoken</groupId>
-    <artifactId>jjwt</artifactId>
-    <version>0.9.1</version>
-</dependency>
+    <dependency>
+        <groupId>io.jsonwebtoken</groupId>
+        <artifactId>jjwt-api</artifactId>
+        <version>0.12.6</version>
+    </dependency>
+
+    <dependency>
+        <groupId>io.jsonwebtoken</groupId>
+        <artifactId>jjwt-impl</artifactId>
+        <version>0.12.6</version>
+        <scope>runtime</scope>
+    </dependency>
+
+    <dependency>
+        <groupId>io.jsonwebtoken</groupId>
+        <artifactId>jjwt-jackson</artifactId>
+        <version>0.12.6</version>
+        <scope>runtime</scope>
+    </dependency>
 ```
-- Gerar o token
+- Criar uma classe utilitária para gerar e validar o *token*
 ```java
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+
+import javax.crypto.SecretKey;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Date;
+import java.util.Map;
+
+@Service
 public class JwtUtil {
 
-    private static final String SECRET_KEY = "chave-super-secreta";
+    private final SecretKey key;
 
-    public static String gerarToken(String username) {
+    public JwtUtil() {
+        this.key = Jwts.SIG.HS256.key().build();
+    }
+
+    public String gerarToken(
+            String username,
+            Map<String, Object> claimsExtras) {
+
+        Instant agora = Instant.now();
+
         return Jwts.builder()
-                .setSubject(username)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60)) // 1 hora
-                .signWith(SignatureAlgorithm.HS256, SECRET_KEY)
+                .subject(username)
+                .claims(claimsExtras)
+                .issuedAt(Date.from(agora))
+                .expiration(Date.from(
+                        agora.plus(1, ChronoUnit.HOURS)))
+                .signWith(key, Jwts.SIG.HS256)
                 .compact();
     }
+
+    public Claims obterClaims(String token) {
+        return Jwts.parser()
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+    }
+
+    public boolean validarToken(String token) {
+        try {
+            obterClaims(token);
+            return true;
+        } catch (io.jsonwebtoken.JwtException
+                 | IllegalArgumentException e) {
+            return false;
+        }
+    }
 }
 ```
-- Validar um token gerado
+- Criar o *endpoint* para obtenção do *token*
 ```java
-    public static boolean validateToken(String token) {
-        try {
-            Jwts.parser()
-                .setSigningKey(SECRET_KEY)
-                .parseClaimsJws(token); // se não lançar exceção, está ok
-            return true;
-        } catch (ExpiredJwtException e) {
-            System.out.println("Token expirado");
-        } catch (SignatureException e) {
-            System.out.println("Assinatura inválida");
-        } catch (Exception e) {
-            System.out.println("Token inválido");
-        }
-        return false;
-    }
-```
-- Incluir mais atributos para a geração do token
-```java
-Map<String, Object> claims = new HashMap<>();
-claims.put("email", email);
-claims.put("role", role);
+import org.springframework.security.core.Authentication;
+import java.util.Map;
 
-return Jwts.builder()
-        .setClaims(claims)
-        .setSubject(username)
-        .setIssuedAt(new Date())
-        .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60)) // 1 hora
-        .signWith(SignatureAlgorithm.HS256, SECRET_KEY)
-        .compact();
+// Incluir a injeção de dependência
+private JwtUtil jwtUtil = null;
+
+public AlunoController(JwtUtil jwtUtil) {
+    this.jwtUtil = jwtUtil;
+}
+
+@GetMapping("/token")
+public ResponseEntity<String> gerarToken(Authentication authentication) {
+
+    String token = jwtUtil.gerarToken(authentication.getName(),Map.of());
+    return ResponseEntity.ok(token);
+
+}
 ```
-- Para obter os atributos a partir do *token* usar o `getBody()`
+- Criar um filtro para validar o *token*
 ```java
-return Jwts.parser()
-        .setSigningKey(SECRET_KEY)
-        .parseClaimsJws(token)
-        .getBody();
-```
-- Criar um filtro para gerar o *token*
-```java
-public class RequestFilter extends OncePerRequestFilter {
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
+import java.io.IOException;
+import java.util.Collections;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+@Component
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private final JwtUtil jwtUtil;
+
+    public JwtAuthenticationFilter(JwtUtil jwtUtil) {
+        this.jwtUtil = jwtUtil;
+    }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain)
             throws ServletException, IOException {
 
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        response.setHeader("JWT-TOKEN", JwtUtil.gerarToken(auth.getName()));
-        doFilter(request, response, filterChain);
+        String header = request.getHeader("Authorization");
 
+        if (header == null || !header.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        String token = header.substring(7);
+
+        try {
+            Claims claims = jwtUtil.obterClaims(token);
+            String username = claims.getSubject();
+
+            if (username == null || username.isBlank()) {
+                response.sendError(
+                        HttpServletResponse.SC_UNAUTHORIZED,
+                        "Token sem subject válido");
+                return;
+            }
+
+            var authentication = new UsernamePasswordAuthenticationToken(
+                    username,
+                    null,
+                    Collections.emptyList());
+
+            SecurityContextHolder.getContext()
+                    .setAuthentication(authentication);
+
+        } catch (JwtException | IllegalArgumentException e) {
+            SecurityContextHolder.clearContext();
+
+            response.sendError(
+                    HttpServletResponse.SC_UNAUTHORIZED,
+                    "Token inválido ou expirado");
+            return;
+        }
+
+        filterChain.doFilter(request, response);
     }
-
-    @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
-
-        return request.getServletPath().equals("/login");
-    }
-
 }
 ```
-
+- Alterar a classe de configuração de segurança `SecurityConfig` para incluir o filtro criado acima
 ```java
-    http.sessionManagement(sessionConfig -> sessionConfig.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-    http.addFilterAfter(new RequestFilter(), BasicAuthenticationFilter.class);
+@Configuration
+public class SecurityConfig {
+
+    @Bean
+    SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtFilter) throws Exception {
+
+        http.httpBasic(withDefaults())
+
+                .authorizeHttpRequests(auth -> auth.requestMatchers("/aluno/token").authenticated())
+                .authorizeHttpRequests(auth -> auth.requestMatchers("/aluno/listar").authenticated())
+                .authorizeHttpRequests(auth -> auth.requestMatchers("/aluno/listar/turma/*").permitAll())
+                .addFilterBefore(
+                        jwtFilter,
+                        UsernamePasswordAuthenticationFilter.class);
+        ;
+        return http.build();
+
+    }
+}
 ```
 ## Autenticação e Autorização com OAuth2
 - Instalar o [Keycloack](https://www.keycloak.org/downloads) como provedor de autenticação
+- Iniciar o **Keycloack** na pasta `bin` com o comando `kc start-dev`
 - Acessar o console do *Keycloack* e efetuar login como `admin`/`admin`
 - Seguir o [Guia de Configuração do Keyglock](https://www.keycloak.org/getting-started/getting-started-docker)
+- Criar um **Healm**
+- Criar um usuário e sua respectiva senha (*credential*)
+- Criar os papéis
 - Desabilitar User verify profile (Authentication (menu lateral esquerdo) -> Required actios tab)
 - Para obter o token, realizar um *POST* na URL `http://localhost:9090/realms/FaculdadeHealm/protocol/openid-connect/token`
     - No header da requisição deve constar `Content-Type`:`application/x-www-form-urlencoded`
@@ -1967,7 +2097,7 @@ public class JwtConverter implements Converter<Jwt, AbstractAuthenticationToken>
     }
 }
 ```
-- Atualizar o `FaculdadeSecurity`
+- Atualizar o `SecurityConfig`
 ```java
 
 @Autowired
