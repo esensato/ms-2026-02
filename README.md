@@ -1988,7 +1988,7 @@ public class SecurityConfig {
 - Criar um usuário e sua respectiva senha (*credential*)
 - Criar os papéis
 - Desabilitar User verify profile (Authentication (menu lateral esquerdo) -> Required actios tab)
-- Para obter o token, realizar um *POST* na URL `http://localhost:9090/realms/FaculdadeHealm/protocol/openid-connect/token`
+- Para obter o token, realizar um *POST* na URL `http://localhost:8080/realms/faculdade/protocol/openid-connect/token`
     - No header da requisição deve constar `Content-Type`:`application/x-www-form-urlencoded`
     - Definir os parâmetros abaixo no corpo da requisição:
         - client_id:<your_client_id>
