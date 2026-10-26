@@ -1,7 +1,8 @@
 package aula.microservicos.aluno.restful;
 
 import java.util.Optional;
-
+import org.springframework.security.core.Authentication;
+import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -32,11 +33,19 @@ public class AlunoController {
 
     private final AlunoRepository repo;
     private AlunoMetrica metrica;
+    private JwtUtil jwtUtil = null;
 
     // Injeção de dependência do AlunoRepository
-    public AlunoController(AlunoRepository repo, AlunoMetrica metrica) {
+    public AlunoController(AlunoRepository repo, AlunoMetrica metrica, JwtUtil jwtUtil) {
         this.repo = repo;
         this.metrica = metrica;
+        this.jwtUtil = jwtUtil;
+    }
+
+    @GetMapping("/versao")
+    public ResponseEntity<String> versao() {
+
+        return new ResponseEntity<String>("v.1.0", HttpStatus.OK);
     }
 
     // GET - http://localhost:8080/aluno
@@ -127,6 +136,14 @@ public class AlunoController {
         } else {
             throw new AlunoInexistenteException();
         }
+
+    }
+
+    @GetMapping("/token")
+    public ResponseEntity<String> gerarToken(Authentication authentication) {
+
+        String token = jwtUtil.gerarToken(authentication.getName(), Map.of());
+        return ResponseEntity.ok(token);
 
     }
 
