@@ -2373,7 +2373,7 @@ public class BolsaKafkaController {
 ```
 - Para trabalhar com objetos java, criar, por exemplo uma classe
 ```java
-public class OrdemBolsa {}
+public class OrdemBolsa {
     public String codigo;
     public String operacao;
     public Integer quantidade;
