@@ -2473,9 +2473,7 @@ GET /v2/aluno/10520
     - Inserir um parâmetro no `header` da (`Accept`) requisição com o valor da versão desejada (`application/sistema.academico-v1+json` ou `application/sistema.academico-v2+json`)
 
 
-# Gestão Centralizada de Configurações com Spring Cloud Config
-
-## 1. Introdução
+# Gestão de Configurações
 
 Em uma arquitetura de microserviços, normalmente temos diversas aplicações executando de maneira independente.
 
@@ -2494,7 +2492,7 @@ Uma possibilidade para resolver esse problema é utilizar o **Spring Cloud Confi
 
 O Spring Cloud Config permite centralizar as configurações das aplicações em um repositório externo, disponibilizando essas informações por meio de uma API HTTP.
 
-## 2. Arquitetura proposta
+## Arquitetura proposta
 
 Vamos considerar uma arquitetura composta por três aplicações:
 
@@ -2504,7 +2502,7 @@ Vamos considerar uma arquitetura composta por três aplicações:
 
 As configurações serão armazenadas em um repositório Git local.
 
-## 3. Criando o repositório de configurações
+## Criando o repositório de configurações
 
 No Linux:
 
@@ -2527,7 +2525,7 @@ config-repo/
     motorista-prd.properties
 ```
 
-### 3.1. Configurações compartilhadas
+### Configurações compartilhadas
 
 Arquivo `application.properties`:
 
@@ -2538,7 +2536,7 @@ sistema.versao=1.0
 
 Essas propriedades estarão disponíveis para todas as aplicações.
 
-### 3.2. Configurações do microserviço carro
+### Configurações do microserviço carro
 
 Arquivo `carro.properties`:
 
@@ -2564,7 +2562,7 @@ carro.ambiente=producao
 carro.database.url=jdbc:mysql://servidor-producao:3306/carro
 ```
 
-### 3.3. Configurações do microserviço motorista
+### Configurações do microserviço motorista
 
 Arquivo `motorista.properties`:
 
@@ -2587,14 +2585,14 @@ server.port=8082
 motorista.ambiente=producao
 ```
 
-### 3.4. Registrando os arquivos no Git
+### Registrando os arquivos no Git
 
 ```bash
 git add .
 git commit -m "Configuracoes iniciais dos microservicos"
 ```
 
-## 4. Criando o Spring Cloud Config Server
+## Criando o Spring Cloud Config Server
 
 Crie um projeto Spring Boot utilizando o Spring Initializr:
 
@@ -2602,7 +2600,7 @@ https://start.spring.io/
 
 Adicione a dependência Config Server.
 
-### 4.1. Dependência Maven
+### Dependência Maven
 
 ```xml
 <dependency>
@@ -2627,7 +2625,7 @@ Configure também o Spring Cloud BOM, utilizando uma versão compatível com a v
 </dependencyManagement>
 ```
 
-### 4.2. Habilitando o Config Server
+### Habilitando o Config Server
 
 ```java
 @SpringBootApplication
@@ -2641,7 +2639,7 @@ public class ConfigServerApplication {
 }
 ```
 
-### 4.3. Configurando o repositório Git
+### Configurando o repositório Git
 
 Arquivo `application.properties`:
 
@@ -2662,7 +2660,7 @@ git branch --show-current
 
 Se a branch for `main`, altere a propriedade `default-label` para `main`.
 
-### 4.4. Iniciando o Config Server
+### Iniciando o Config Server
 
 Execute a aplicação Spring Boot.
 
@@ -2672,7 +2670,7 @@ O servidor estará disponível em:
 http://localhost:8888
 ```
 
-## 5. Testando o Config Server
+## Testando o Config Server
 
 O Spring Cloud Config disponibiliza uma API HTTP para consultar as configurações.
 
@@ -2704,13 +2702,13 @@ curl http://localhost:8888/motorista/dev
 
 O servidor retornará um JSON contendo as propriedades encontradas.
 
-## 6. Configurando o Config Client
+## Configurando o Config Client
 
 Agora vamos configurar os microserviços para que possam consultar o Config Server.
 
 Utilizaremos o microserviço `carro` como exemplo.
 
-### 6.1. Dependência Maven
+### Dependência Maven
 
 ```xml
 <dependency>
@@ -2721,7 +2719,7 @@ Utilizaremos o microserviço `carro` como exemplo.
 
 Utilize o mesmo Spring Cloud BOM e a mesma estratégia de gerenciamento de versões do Config Server.
 
-### 6.2. Configurando o Config Client
+### Configurando o Config Client
 
 Arquivo `application.properties`:
 
@@ -2741,17 +2739,7 @@ A propriedade `spring.profiles.active` indica o ambiente utilizado.
 
 Não é necessário definir adicionalmente `spring.cloud.config.profile`, pois os perfis ativos da aplicação são utilizados por padrão.
 
-### 6.3. Iniciando o microserviço
-
-Certifique-se de que o Config Server esteja em execução.
-
-Depois, inicie o microserviço carro.
-
-Durante a inicialização, o Spring Boot consultará o Config Server e carregará as configurações correspondentes.
-
-A aplicação utilizará a porta `8081`, definida remotamente em `carro-dev.properties`.
-
-## 7. Acessando as propriedades remotas
+## Acessando as propriedades remotas
 
 As propriedades obtidas do Config Server podem ser utilizadas normalmente na aplicação Spring Boot.
 
@@ -2805,7 +2793,7 @@ As propriedades foram obtidas de diferentes arquivos:
 - `carro.properties`: fabricante.
 - `carro-dev.properties`: ambiente.
 
-## 8. Alterando o ambiente de execução
+## Alterando o ambiente de execução
 
 Para executar o microserviço carro em produção, altere o perfil ativo:
 
@@ -2827,7 +2815,7 @@ carro-prd.properties
 
 O mesmo código-fonte poderá ser utilizado em diferentes ambientes, sem a necessidade de alterar diretamente os arquivos de configuração da aplicação.
 
-## 9. Atualizando as configurações
+## Atualizando as configurações
 
 Por padrão, o Config Client carrega as configurações durante a inicialização.
 
@@ -2837,7 +2825,7 @@ Uma possibilidade é reiniciar a aplicação.
 
 Também podemos implementar atualização sob demanda utilizando Spring Boot Actuator e a anotação `@RefreshScope`.
 
-### 9.1. Adicionando a dependência Actuator
+### Adicionando a dependência Actuator
 
 ```xml
 <dependency>
@@ -2846,7 +2834,7 @@ Também podemos implementar atualização sob demanda utilizando Spring Boot Act
 </dependency>
 ```
 
-### 9.2. Expondo o endpoint refresh
+### Expondo o endpoint refresh
 
 Arquivo `application.properties`:
 
@@ -2854,7 +2842,7 @@ Arquivo `application.properties`:
 management.endpoints.web.exposure.include=health,info,refresh
 ```
 
-### 9.3. Utilizando RefreshScope
+### Utilizando RefreshScope
 
 ```java
 @RestController
