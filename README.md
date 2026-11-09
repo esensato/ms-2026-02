@@ -2472,195 +2472,420 @@ GET /v2/aluno/10520
     ```
     - Inserir um parâmetro no `header` da (`Accept`) requisição com o valor da versão desejada (`application/sistema.academico-v1+json` ou `application/sistema.academico-v2+json`)
 
-## Gestão de Configuração
-- Um problema comum com diversos serviços fisicamente serparados é a gestão de configuração
-- É necessário um ponto central para configurar os serviços
-- Uma possibiblidade é o uso do **Spring Config Server**
-- Instalar a dependência:
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-	<modelVersion>4.0.0</modelVersion>
-	<parent>
-		<groupId>org.springframework.boot</groupId>
-		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.5.0</version>
-		<relativePath/>
-	</parent>
-	<groupId>aula.microservicos</groupId>
-	<artifactId>configserver</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
-	<name>configserver</name>
-	<description>Demo project for Spring Boot</description>
-	<url/>
-	<licenses>
-		<license/>
-	</licenses>
-	<developers>
-		<developer/>
-	</developers>
-	<scm>
-		<connection/>
-		<developerConnection/>
-		<tag/>
-		<url/>
-	</scm>
-	<properties>
-		<java.version>17</java.version>
-		<spring-cloud.version>2025.0.0-RC1</spring-cloud.version>
-	</properties>
-	<dependencies>
-		<dependency>
-			<groupId>org.springframework.cloud</groupId>
-			<artifactId>spring-cloud-config-server</artifactId>
-		</dependency>
 
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-	</dependencies>
-	<dependencyManagement>
-		<dependencies>
-			<dependency>
-				<groupId>org.springframework.cloud</groupId>
-				<artifactId>spring-cloud-dependencies</artifactId>
-				<version>${spring-cloud.version}</version>
-				<type>pom</type>
-				<scope>import</scope>
-			</dependency>
-		</dependencies>
-	</dependencyManagement>
+# Gestão Centralizada de Configurações com Spring Cloud Config
 
-	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
-			</plugin>
-		</plugins>
-	</build>
-	<repositories>
-		<repository>
-			<id>spring-milestones</id>
-			<name>Spring Milestones</name>
-			<url>https://repo.spring.io/milestone</url>
-			<snapshots>
-				<enabled>false</enabled>
-			</snapshots>
-		</repository>
-	</repositories>
+## 1. Introdução
 
-</project>
+Em uma arquitetura de microserviços, normalmente temos diversas aplicações executando de maneira independente.
+
+Cada aplicação possui suas próprias configurações, como:
+
+- Endereço de bancos de dados.
+- Portas de comunicação.
+- Endereços de outros microserviços.
+- Configurações de mensageria.
+- Parâmetros específicos de cada ambiente.
+- Credenciais e informações de conexão.
+
+Um problema comum é a necessidade de manter essas configurações em diversos arquivos e aplicações.
+
+Uma possibilidade para resolver esse problema é utilizar o **Spring Cloud Config Server**.
+
+O Spring Cloud Config permite centralizar as configurações das aplicações em um repositório externo, disponibilizando essas informações por meio de uma API HTTP.
+
+## 2. Arquitetura proposta
+
+Vamos considerar uma arquitetura composta por três aplicações:
+
+- `config-server`: responsável por centralizar e disponibilizar as configurações.
+- `carro`: microserviço responsável pelo gerenciamento de veículos.
+- `motorista`: microserviço responsável pelo gerenciamento de motoristas.
+
+As configurações serão armazenadas em um repositório Git local.
+
+## 3. Criando o repositório de configurações
+
+No Linux:
+
+```bash
+mkdir -p ~/config-repo
+cd ~/config-repo
+git init
 ```
-- Habilitar o *Config Server*
-    ```java
-    @SpringBootApplication
-    @EnableConfigServer
-    public class Application {
-     public static void main(String[] args) {
-      SpringApplication.run(Application.class, args);
-     }
-    
+
+Crie os seguintes arquivos:
+
+```text
+config-repo/
+    application.properties
+    carro.properties
+    carro-dev.properties
+    carro-prd.properties
+    motorista.properties
+    motorista-dev.properties
+    motorista-prd.properties
+```
+
+### 3.1. Configurações compartilhadas
+
+Arquivo `application.properties`:
+
+```properties
+empresa.nome=Faculdade
+sistema.versao=1.0
+```
+
+Essas propriedades estarão disponíveis para todas as aplicações.
+
+### 3.2. Configurações do microserviço carro
+
+Arquivo `carro.properties`:
+
+```properties
+spring.application.name=carro
+carro.fabricante=Volkswagen
+carro.limite.consulta=100
+```
+
+Arquivo `carro-dev.properties`:
+
+```properties
+server.port=8081
+carro.ambiente=desenvolvimento
+carro.database.url=jdbc:mysql://localhost:3306/carro_dev
+```
+
+Arquivo `carro-prd.properties`:
+
+```properties
+server.port=8081
+carro.ambiente=producao
+carro.database.url=jdbc:mysql://servidor-producao:3306/carro
+```
+
+### 3.3. Configurações do microserviço motorista
+
+Arquivo `motorista.properties`:
+
+```properties
+spring.application.name=motorista
+motorista.limite.consulta=50
+```
+
+Arquivo `motorista-dev.properties`:
+
+```properties
+server.port=8082
+motorista.ambiente=desenvolvimento
+```
+
+Arquivo `motorista-prd.properties`:
+
+```properties
+server.port=8082
+motorista.ambiente=producao
+```
+
+### 3.4. Registrando os arquivos no Git
+
+```bash
+git add .
+git commit -m "Configuracoes iniciais dos microservicos"
+```
+
+## 4. Criando o Spring Cloud Config Server
+
+Crie um projeto Spring Boot utilizando o Spring Initializr:
+
+https://start.spring.io/
+
+Adicione a dependência Config Server.
+
+### 4.1. Dependência Maven
+
+```xml
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-config-server</artifactId>
+</dependency>
+```
+
+Configure também o Spring Cloud BOM, utilizando uma versão compatível com a versão do Spring Boot:
+
+```xml
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-dependencies</artifactId>
+            <version>${spring-cloud.version}</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+```
+
+### 4.2. Habilitando o Config Server
+
+```java
+@SpringBootApplication
+@EnableConfigServer
+public class ConfigServerApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(
+            ConfigServerApplication.class, args);
     }
-    ```
-- Definir nas propriedades o caminho onde os arquivos de configuração serão armazenados
-
-`spring.cloud.config.server.git.uri=file://`
-
-- Criar os arquivos de configuração dentro do diretório. Ex: `faculdade-dev.properties`, `faculdade-prd.properties`, etc...
-- Configurar o *Config Client*
-- Instalar a dependência:
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-	<modelVersion>4.0.0</modelVersion>
-	<parent>
-		<groupId>org.springframework.boot</groupId>
-		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.5.0</version>
-		<relativePath/> <!-- lookup parent from repository -->
-	</parent>
-	<groupId>com.example</groupId>
-	<artifactId>demo</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
-	<name>demo</name>
-	<description>Demo project for Spring Boot</description>
-	<url/>
-	<licenses>
-		<license/>
-	</licenses>
-	<developers>
-		<developer/>
-	</developers>
-	<scm>
-		<connection/>
-		<developerConnection/>
-		<tag/>
-		<url/>
-	</scm>
-	<properties>
-		<java.version>17</java.version>
-		<spring-cloud.version>2025.0.0-RC1</spring-cloud.version>
-	</properties>
-	<dependencies>
-		<dependency>
-			<groupId>org.springframework.cloud</groupId>
-			<artifactId>spring-cloud-starter-config</artifactId>
-		</dependency>
-
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-	</dependencies>
-	<dependencyManagement>
-		<dependencies>
-			<dependency>
-				<groupId>org.springframework.cloud</groupId>
-				<artifactId>spring-cloud-dependencies</artifactId>
-				<version>${spring-cloud.version}</version>
-				<type>pom</type>
-				<scope>import</scope>
-			</dependency>
-		</dependencies>
-	</dependencyManagement>
-
-	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
-			</plugin>
-		</plugins>
-	</build>
-	<repositories>
-		<repository>
-			<id>spring-milestones</id>
-			<name>Spring Milestones</name>
-			<url>https://repo.spring.io/milestone</url>
-			<snapshots>
-				<enabled>false</enabled>
-			</snapshots>
-		</repository>
-	</repositories>
-
-</project>
+}
 ```
-- Configurar as propriedades
-    ```
-    spring.config.import=optional:configserver:http://localhost:8888
-    spring.application.name=carro
-    ```
-- Referenciar o perfil de configuração desejada
-    ```
-    spring.profiles.active=dev
-    spring.cloud.config.profile=dev
-    ```
+
+### 4.3. Configurando o repositório Git
+
+Arquivo `application.properties`:
+
+```properties
+spring.application.name=config-server
+server.port=8888
+
+spring.cloud.config.server.git.uri=file://${user.home}/config-repo
+spring.cloud.config.server.git.default-label=master
+```
+
+Verifique o nome da branch:
+
+```bash
+cd ~/config-repo
+git branch --show-current
+```
+
+Se a branch for `main`, altere a propriedade `default-label` para `main`.
+
+### 4.4. Iniciando o Config Server
+
+Execute a aplicação Spring Boot.
+
+O servidor estará disponível em:
+
+```text
+http://localhost:8888
+```
+
+## 5. Testando o Config Server
+
+O Spring Cloud Config disponibiliza uma API HTTP para consultar as configurações.
+
+O formato da URL é:
+
+```text
+/{application}/{profile}/{label}
+```
+
+Exemplos:
+
+Consultar o microserviço carro no ambiente de desenvolvimento:
+
+```bash
+curl http://localhost:8888/carro/dev
+```
+
+Consultar o ambiente de produção:
+
+```bash
+curl http://localhost:8888/carro/prd
+```
+
+Consultar o microserviço motorista:
+
+```bash
+curl http://localhost:8888/motorista/dev
+```
+
+O servidor retornará um JSON contendo as propriedades encontradas.
+
+## 6. Configurando o Config Client
+
+Agora vamos configurar os microserviços para que possam consultar o Config Server.
+
+Utilizaremos o microserviço `carro` como exemplo.
+
+### 6.1. Dependência Maven
+
+```xml
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-config</artifactId>
+</dependency>
+```
+
+Utilize o mesmo Spring Cloud BOM e a mesma estratégia de gerenciamento de versões do Config Server.
+
+### 6.2. Configurando o Config Client
+
+Arquivo `application.properties`:
+
+```properties
+spring.application.name=carro
+
+spring.config.import=configserver:http://localhost:8888
+
+spring.profiles.active=dev
+```
+
+A propriedade `spring.application.name` identifica a aplicação.
+
+A propriedade `spring.config.import` informa que a aplicação deverá consultar o Config Server durante sua inicialização.
+
+A propriedade `spring.profiles.active` indica o ambiente utilizado.
+
+Não é necessário definir adicionalmente `spring.cloud.config.profile`, pois os perfis ativos da aplicação são utilizados por padrão.
+
+### 6.3. Iniciando o microserviço
+
+Certifique-se de que o Config Server esteja em execução.
+
+Depois, inicie o microserviço carro.
+
+Durante a inicialização, o Spring Boot consultará o Config Server e carregará as configurações correspondentes.
+
+A aplicação utilizará a porta `8081`, definida remotamente em `carro-dev.properties`.
+
+## 7. Acessando as propriedades remotas
+
+As propriedades obtidas do Config Server podem ser utilizadas normalmente na aplicação Spring Boot.
+
+Crie um controller:
+
+```java
+@RestController
+@RequestMapping("/carro")
+public class CarroController {
+
+    @Value("${empresa.nome}")
+    private String empresa;
+
+    @Value("${carro.fabricante}")
+    private String fabricante;
+
+    @Value("${carro.ambiente}")
+    private String ambiente;
+
+    @GetMapping("/info")
+    public Map<String, String> info() {
+
+        return Map.of(
+            "empresa", empresa,
+            "fabricante", fabricante,
+            "ambiente", ambiente
+        );
+    }
+}
+```
+
+Teste:
+
+```bash
+curl http://localhost:8081/carro/info
+```
+
+Resposta esperada:
+
+```json
+{
+    "empresa": "Faculdade",
+    "fabricante": "Volkswagen",
+    "ambiente": "desenvolvimento"
+}
+```
+
+As propriedades foram obtidas de diferentes arquivos:
+
+- `application.properties`: empresa.
+- `carro.properties`: fabricante.
+- `carro-dev.properties`: ambiente.
+
+## 8. Alterando o ambiente de execução
+
+Para executar o microserviço carro em produção, altere o perfil ativo:
+
+```properties
+spring.profiles.active=prd
+```
+
+Ou inicie a aplicação com:
+
+```bash
+java -jar carro.jar --spring.profiles.active=prd
+```
+
+Nesse caso, o Spring Cloud Config consultará o arquivo:
+
+```text
+carro-prd.properties
+```
+
+O mesmo código-fonte poderá ser utilizado em diferentes ambientes, sem a necessidade de alterar diretamente os arquivos de configuração da aplicação.
+
+## 9. Atualizando as configurações
+
+Por padrão, o Config Client carrega as configurações durante a inicialização.
+
+Uma alteração no repositório Git não atualiza automaticamente as propriedades de uma aplicação que já está em execução.
+
+Uma possibilidade é reiniciar a aplicação.
+
+Também podemos implementar atualização sob demanda utilizando Spring Boot Actuator e a anotação `@RefreshScope`.
+
+### 9.1. Adicionando a dependência Actuator
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-actuator</artifactId>
+</dependency>
+```
+
+### 9.2. Expondo o endpoint refresh
+
+Arquivo `application.properties`:
+
+```properties
+management.endpoints.web.exposure.include=health,info,refresh
+```
+
+### 9.3. Utilizando RefreshScope
+
+```java
+@RestController
+@RequestMapping("/carro")
+@RefreshScope
+public class CarroController {
+
+    @Value("${carro.fabricante}")
+    private String fabricante;
+
+    @GetMapping("/fabricante")
+    public String fabricante() {
+        return fabricante;
+    }
+}
+```
+
+Após alterar e registrar as configurações no Git, execute:
+
+```bash
+git add .
+git commit -m "Atualizacao das configuracoes"
+```
+
+Em seguida, solicite a atualização das configurações:
+
+```bash
+curl -X POST http://localhost:8081/actuator/refresh
+```
+
+O endpoint fará com que as configurações remotas sejam consultadas novamente e atualizará os componentes que utilizam `@RefreshScope`.
 
 ## Eureka
 - É um servidor de nomes onde os microserviços podem ser registrados
