@@ -1982,19 +1982,105 @@ public class SecurityConfig {
 ## Autenticação e Autorização com OAuth2
 - Instalar o [Keycloack](https://www.keycloak.org/downloads) como provedor de autenticação
 - Iniciar o **Keycloack** na pasta `bin` com o comando `kc start-dev`
-- Acessar o console do *Keycloack* e efetuar login como `admin`/`admin`
+- Acessar o console do *Keycloack* e criar o usuário inicial
+- Parâmetros:
+    - Realm: faculdade
+    - Client: faculdade-client
+    - Client público, sem client_secret
+    - Direct Access Grants habilitado
+    - Usuário: aluno
+    - Senha: 123456
 - Seguir o [Guia de Configuração do Keyglock](https://www.keycloak.org/getting-started/getting-started-docker)
-- Criar um **Healm**
-- Criar um usuário e sua respectiva senha (*credential*)
-- Criar os papéis
-- Desabilitar User verify profile (Authentication (menu lateral esquerdo) -> Required actios tab)
-- Para obter o token, realizar um *POST* na URL `http://localhost:8080/realms/faculdade/protocol/openid-connect/token`
-    - No header da requisição deve constar `Content-Type`:`application/x-www-form-urlencoded`
-    - Definir os parâmetros abaixo no corpo da requisição:
-        - client_id:<your_client_id>
-        - username:<your_username>
-        - password:<your_password>
-        - grant_type:password
+- Existe também a possibilidade de utilizar a ferramenta cliente de administração `kcadm`
+```bash
+cd keycloak-26.8.2/bin
+./kcadm.sh config credentials --server http://localhost:8080 --realm master --user admin
+
+./kcadm.sh create realms -s realm=faculdade -s enabled=true
+
+./kcadm.sh create clients \
+  -r faculdade \
+  -s clientId=faculdade-client \
+  -s enabled=true \
+  -s protocol=openid-connect \
+  -s publicClient=true \
+  -s directAccessGrantsEnabled=true \
+  -s standardFlowEnabled=false
+
+./kcadm.sh create users \
+  -r faculdade \
+  -s username=aluno \
+  -s enabled=true
+
+./kcadm.sh update users \
+  -r faculdade \
+  -q username=aluno \
+  -s firstName=Aluno \
+  -s lastName=Teste \
+  -s email=aluno@faculdade.local \
+  -s emailVerified=true \
+  -s enabled=true
+
+./kcadm.sh set-password \
+  -r faculdade \
+  --username aluno \
+  --new-password 123456
+
+USER_ID=$(./kcadm.sh get users \
+  -r faculdade \
+  -q username=aluno \
+  --fields id \
+  --format csv --noquotes)
+
+echo "$USER_ID"
+
+./kcadm.sh update users/$USER_ID \
+  -r faculdade \
+  -s firstName=Aluno \
+  -s lastName=Teste \
+  -s email=aluno@faculdade.local \
+  -s emailVerified=true \
+  -s enabled=true
+
+./kcadm.sh update users/$USER_ID \
+  -r faculdade \
+  -s 'requiredActions=[]'
+
+curl -X POST \
+  http://localhost:8080/realms/faculdade/protocol/openid-connect/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "client_id=faculdade-client" \
+  -d "username=aluno" \
+  -d "password=123456" \
+  -d "grant_type=password"
+```
+- Criar as *roles*
+```bash
+./kcadm.sh create roles \
+  -r faculdade \
+  -s name=USER
+
+./kcadm.sh create roles \
+  -r faculdade \
+  -s name=ADMIN
+
+USER_ID=$(bin/kcadm.sh get users \
+  -r faculdade \
+  -q username=aluno \
+  --fields id \
+  --format csv --noquotes)
+
+./kcadm.sh add-roles \
+  -r faculdade \
+  --uid "$USER_ID" \
+  --rolename USER
+
+./kcadm.sh add-roles \
+  -r faculdade \
+  --uid "$USER_ID" \
+  --rolename ADMIN
+```
+
 - O token obtido pode ser decodificado em (Jwt)[https://jwt.io/]
 - Para as requisições aos endpoints o token deve ser passado no header como 'Authorization': 'Bearer' + access_token
 ### Configuração no Spring
@@ -2122,358 +2208,29 @@ SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Excepti
 
 }
 ```
-## Websocket e STOMP
-- *Websocket* é um protocolo **bidirecional** (*full-duplex*) para processamento de mensagens em tempo real
-- O protocolo *HTTP* é utilizado inicialmente para o estabelecimento da conexão
-- Posteriormente toda comunicação é feita por meio de *TCP/IP*
-- *STOMP* (Simple Text Oriented Messaging Protocol) é um protocolo para troca de mensagens que pode ser executado sobre *Websocket*
-### Spring Boot Websocket
-- Adicionar a dependência
-    ```xml
-    <dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-websocket</artifactId>
-    </dependency>
-    ```
-- Habilitar o log de *trace* (opcional): `logging.level.org.springframework.web.socket=TRACE`
-- Criar a configuração
-    ```java
-    @Configuration
-    @EnableWebSocketMessageBroker
-    public class ChatConfig implements WebSocketMessageBrokerConfigurer {
+- Testando
+```bash
+curl -X POST \
+  http://localhost:9090/seguranca/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"aluno","password":"123456"}'
 
-        @Override
-        public void registerStompEndpoints(@NonNull StompEndpointRegistry registry) {
-    
-            // define qual será o endpoint para a troca de mensagens
-            registry.addEndpoint("/mensagem").withSockJS();
-    
-        }
+TOKEN="COLE_AQUI_O_ACCESS_TOKEN"
 
-        @Override
-        public void configureMessageBroker(@NonNull MessageBrokerRegistry registry) {
-    
-            // prefixo do endpoint onde as mensagens serão recebidas pelos clientes
-            registry.enableSimpleBroker("/topic/", "/queue/");
-    
-            // prefixo do endpoint para onde as mensagens serão enviadas
-            registry.setApplicationDestinationPrefixes("/app");
-    
-        }
-    
-    }
-    ```
-- A conexão principal deverá ser feita em `http://localhost:8080/mensagem`
-- Ao realizar um simples **GET** neste *endpoint* a seguinte resposta é esperada *Welcome to SockJS!*
-- Criar uma classe para encapsular as mensagens
-```java
-public class Mensagem {
+curl http://localhost:9090/seguranca/info
 
-    private String mensagem;
+curl http://localhost:9090/seguranca/user -H "Authorization: Bearer $TOKEN"
 
-    public String getMensagem() {
-        return mensagem;
-    }
+curl http://localhost:9090/seguranca/admin -H "Authorization: Bearer $TOKEN"
 
-    public void setMensagem(String mensagem) {
-        this.mensagem = mensagem;
-    }
-}
+curl http://localhost:9090/seguranca/user
 ```
-- Implementar o *Controller* que irá receber as mensagens e encaminhar para a fila ou tópico
-```java
-@Controller
-public class Chat {
-
-    @MessageMapping("/chat")
-    @SendTo("/topic/mensagens") // direciona para os inscritos no tópico
-    public Mensagem getMensagens(Mensagem mensagem) {
-        return mensagem;
-    }
-
-}
-```
-- Mensagens enviadas do cliente por meio do caminho `/app/chat` serão encaminhadas no *Controller* para o *broker* no caminho `/topic/mensagens`
-- Clientes inscritos no `/topic/mensagens` recebem as mensagens encaminhadas
-- Os clientes deverão se inscrever 
-- Criar uma pasta *public* dentro de *java* para publicação de conteúdo estático
-- Na pasta *public*, incluir o seguinte cliente *HTML*
-```html
-<html>
-
-<head>
-    <!-- Bibliotecas sockjs e stomp javascript -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.0/sockjs.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
-
-    <script>
-
-        // estabelece a conexão com o endpoint principal
-        let sock = new SockJS("http://localhost:8080/mensagem");
-
-        // cria o cliente Websocket utilizando o protocolo STOMP
-        let client = Stomp.over(sock);
-
-        // efetua a conexão e registra a função de callback
-        client.connect({}, frame => {
-
-            // se inscreve no tópico "/topic/mensagens" para receber as mensagens
-            client.subscribe("/topic/mensagens", payload => {
-
-                let message_list = document.getElementById('message-list');
-                let message = document.createElement('li');
-
-                message.appendChild(document.createTextNode(JSON.parse(payload.body).mensagem));
-                message_list.appendChild(message);
-
-            });
-
-        });
-
-        // envia a mensagem
-        function sendMessage() {
-
-            let input = document.getElementById("mensagem");
-            let message = input.value;
-
-            client.send("/app/chat", {}, JSON.stringify({ mensagem: message }));
-
-        }
-
-    </script>
-</head>
-
-<body>
-    <h1>Chat</h1>
-
-    <label for="mensagem">Mensagem:</label>
-    <input type="text" id="mensagem">
-
-    <button onclick="sendMessage()">Enviar</button>
-
-    <ul id="message-list"></ul>
-
-</body>
-
-</html>
-```
-- Acessar o *chat* no endereço `http://localhost:8080/chat.html`
-## Programação Reativa
-
-- Mono: Cria um stream de dados para somente 1 único elemento
-- Consumidor:
-    ```java
-    public class ConsumidorMensagemMono {
-        public void exibirMensagem(String msg) {
-            System.out.println("--->  " + msg);
-        }
-    }
-    ```
-- Produtor:
-    ```java
-    public class ProdutorMensagemMono {
-    
-        public static void main(String[] args) throws InterruptedException {
-            ConsumidorMensagemMono cm = new ConsumidorMensagemMono();
-            Mono<String> m = Mono.just("Alo").delayElement(Duration.ofSeconds(5)).log();
-            m.subscribe(cm::exibirMensagem);
-    
-            Thread.sleep(10000);
-    
-            System.out.println("FIM");
-    
-        }
-    
-    }
-    ```
-- Flux: Stream para mais de um elemento
-    ```java
-    public class ProdutorMensagemFlux {
-    
-        public static void main(String[] args) {
-    
-            List<Integer> numeros = new ArrayList<Integer>();
-            Flux.just(1, 2, 3, 4).log().subscribe(numeros::add);
-    
-            System.out.println(numeros);
-    
-        }
-    }
-    ```
-- Implementando um custom subscriber
-    ```java
-    public class ProdutorMensagemFlux {
-    
-        public static void main(String[] args) {
-    
-            List<Integer> numeros = new ArrayList<Integer>();
-            Flux.just(1, 2, 3, 4).log().subscribe(new Subscriber<Integer>() {
-    
-                @Override
-                public void onComplete() {
-                    System.out.println("FIM");
-                }
-    
-                @Override
-                public void onError(Throwable arg0) {
-                }
-    
-                @Override
-                public void onNext(Integer nro) {
-                    numeros.add(nro);
-                }
-    
-                @Override
-                public void onSubscribe(Subscription s) {
-                    s.request(Long.MAX_VALUE);
-                }
-    
-            });
-    
-            System.out.println(numeros);
-    
-        }
-    }
-    ```
-### Exemplo Bolsa Valores
-- Classe para representar valores de ações no decorrer do tempo:
-    ```java
-    public class Cotacao {
-    
-        public static final String[] IDS = { "VALE3", "ITUB4", "PETR4", "BBDC4", "PETR4" };
-    
-        public Cotacao(String idEmpresa, float valor) {
-            super();
-            this.idEmpresa = idEmpresa;
-            this.valor = valor;
-        }
-    
-        private String idEmpresa;
-    
-        public String getIdEmpresa() {
-            return idEmpresa;
-        }
-    
-        public void setIdEmpresa(String idEmpresa) {
-            this.idEmpresa = idEmpresa;
-        }
-    
-        private float valor;
-    
-        public float getValor() {
-            return valor;
-        }
-    
-        public void setValor(float valor) {
-            this.valor = valor;
-        }
-    
-    }
-    ```
-- O produtor neste caso irá enviar em tempo real as cotações atuais das ações da bolsa
-    ```java
-    public class BolsaFlux {
-    
-        private static List<Cotacao> cotacoes = new ArrayList<Cotacao>();
-        public Flux<Cotacao> fluxo;
-    
-        public void iniciar(int repeticoes) throws InterruptedException {
-            Random r = new Random();
-    
-            for (int i = 0; i < repeticoes; i++) {
-                final int valor = (-50 + r.nextInt(100));
-                final int id = r.nextInt(Cotacao.IDS.length);
-                // as cotações são direcionadas para o fluxo
-                cotacoes.add(new Cotacao(Cotacao.IDS[id], 100 - valor));
-    
-            }
-    
-            fluxo = Flux.fromIterable(cotacoes).delayElements(Duration.ofSeconds(2));
-    
-        }
-    
-        public static void main(String[] args) throws InterruptedException {
-            BolsaFlux b = new BolsaFlux();
-            b.iniciar(100);
-        }
-    }
-    ```
-- O consumidor será o *Home Broker* que receberá as cotações
-    ```java
-    public class HomeBrokerFlux {
-    
-        public HomeBrokerFlux(Flux<Cotacao> fluxo) throws InterruptedException {
-            // inscreve o método comprar para processar a ação quando recevida
-            fluxo.subscribe(this::comprar);
-            System.out.println(">> INICIADO <<");
-            long gastatempo = 0;
-            // somente para indicar que alguma atividade está sendo realizada...
-            while (true) {
-                gastatempo++;
-                if (gastatempo > 100000000L) {
-                    System.out.print("-");
-                    gastatempo = 0;
-                }
-            }
-        }
-    
-        // processa a açào quando recebida
-        public void comprar(Cotacao cotacao) {
-            System.out.println(">>> Processando: " + cotacao.getIdEmpresa() + " por " + cotacao.getValor());
-        }
-    }
-    ```
-- Classe principal:
-    ```java
-    public class BolsaMain {
-    
-        public static void main(String[] args) throws InterruptedException {
-    
-            BolsaFlux bolsa = new BolsaFlux();
-            bolsa.iniciar(1);
-            new HomeBrokerFlux(bolsa.fluxo);
-    
-            while (true);
-        }
-    }
-    ```
-### Implementação com Serviço
-- Adicionar a seguinte dependência:
-```xml
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-webflux</artifactId>
-    <version>3.2.4</version>
-</dependency>
-```
-- Obs: a dependência `spring-boot-starter-web` não deve estar presente!
-- Criar um simples endpoint de testes:
-    ```java
-    @Bean
-    public RouterFunction<ServerResponse> mensagem() {
-        return route(GET("/mensagem"),
-                request -> ServerResponse.ok()
-                        .contentType(MediaType.TEXT_PLAIN)
-                        .body(Mono.just("Endpoint Reactive"), String.class));
-    }
-    ```
-- Para transferência das cotações das ações criar o seguinte endpoint:
-    ```java
-    @Bean
-    public RouterFunction<ServerResponse> cotacao() {
-        return route(GET("/cotacao"),
-                request -> ServerResponse.ok()
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .body(Flux.fromIterable(cotacoes).delayElements(Duration.ofSeconds(2)), Cotacao.class));
-    }
-    ```
 ## Kafka
-
 - Efetuar o download e instalação do [Apache Kafka](https://kafka.apache.org/downloads)
 - Para *Windows* os comandos abaixo devem ser executados no diretório do kafka `bin\windows`
 - Gerar o id do cluster com `kafka-storage.bat random-uuid`
 - Criar os diretórios `kafka-storage.bat format --standalone -t [COLE AQUI O RESULTADO DO ITEM ANTERIOR] -c ..\config\server.properties`
-- Iniciar o *Kafka*: `kafka-server-start.bat c..\config\server.properties`
+- Iniciar o *Kafka*: `kafka-server-start.bat ..\config\server.properties`
 - Cria um novo tópico
 
 `kafka-topics.bat --create --topic MeuTopico --bootstrap-server localhost:9092`
@@ -2490,116 +2247,206 @@ public class Chat {
 
 `kafka-console-consumer.bat --topic MeuTopico --from-beginning --bootstrap-server localhost:9092`
 
-
 ## Kafka e SpringBoot
+- Adicionar a dependência:
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-web</artifactId>
+</dependency>
 
-- Adicionar as dependências:
-    ```xml
-    <dependency>
-    <groupId>org.apache.kafka</groupId>
-    <artifactId>kafka-streams</artifactId>
-    </dependency>
-    
-    <dependency>
-    <groupId>org.springframework.kafka</groupId>
-    <artifactId>spring-kafka</artifactId>
-    </dependency>
-    
-    <dependency>
-        <groupId>org.json</groupId>
-        <artifactId>json</artifactId>
-        <version>20240303</version>
-    </dependency>
-    ```
-- Propriedades do producer
-    ```properties
-    spring.kafka.producer.bootstrap-servers=127.0.0.1:9092
-    spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
-    spring.kafka.producer.value-serializer=org.apache.kafka.common.serialization.StringSerializer
-    spring.kafka.producer.group-id=group_id
-    topic.name.producer=topico.comando.teste
-    auto.create.topics.enable=true
-    ```
-- Propriedades do consumer
-    ```properties
-    spring.kafka.consumer.bootstrap-servers=127.0.0.1:9092
-    spring.kafka.consumer.group-id=group_id
-    spring.kafka.consumer.auto-offset-reset=earliest
-    spring.kafka.consumer.key-deserializer=org.apache.kafka.common.serialization.StringDeserializer
-    spring.kafka.consumer.value-deserializer=org.apache.kafka.common.serialization.StringDeserializer
-    topic.name.consumer=topico.comando.teste
-    ```
-- Implementando o producer
-    ```java
-    @Service
-    public class BolsaKafkaProducer {
-    
-        @Value("${topic.name.producer}")
-        private String topicName;
-        
-        private static final Logger log = LoggerFactory.getLogger(BolsaKafkaProducer.class);
-    
-        @Autowired
-        private KafkaTemplate<String, String> kafkaTemplate;
-    
-        public void send(String message){
-            kafkaTemplate.send(topicName, message);
-        	log.debug("Enviado mensagem...");
-        }
-        
-    }
-    ```
-- Implementando o consumer
-    ```java
-    @Service
-    public class BolsaKafkaConsumer {
-    
-        @Value("${topic.name.consumer}")
-        private String topicName;
-    
-        private static final Logger log = LoggerFactory.getLogger(BolsaKafkaConsumer.class);
-    
-        @KafkaListener(topics = "${topic.name.consumer}", groupId = "group_id")
-        public void consume(ConsumerRecord<String, String> payload){
-        	log.info("Tópico: {}", topicName);
-            log.info("key: {}", payload.key());
-            log.info("Headers: {}", payload.headers());
-            log.info("Partion: {}", payload.partition());
-            log.info("Valor: {}", payload.value());
-        }
-    }
-    ```
-- Endpoint do producer
-    ```java
-    @RestController
-    public class BolsaKafkaController {
-    
-        @Autowired
-        private BolsaKafkaProducer producer;
-        
-        @GetMapping("/producer")
-        public ResponseEntity<String> producer() {
-            producer.send("OK!");
-            return new ResponseEntity<String>(HttpStatus.OK);
-        }
-    }
-    ```
-- Serialização de Objetos
-```properties
-spring.kafka.consumer.value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-spring.kafka.producer.value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-spring.kafka.consumer.properties.spring.json.trusted.packages=*
+<dependency>
+<groupId>org.springframework.kafka</groupId>
+<artifactId>spring-kafka</artifactId>
+</dependency>
+
 ```
-- Exemplo de código
+- Definindo as propriedades
+```
+# Kafka Broker
+spring.kafka.bootstrap-servers=localhost:9092
+
+# Producer Configuration
+spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
+spring.kafka.producer.value-serializer=org.apache.kafka.common.serialization.StringSerializer
+
+# Consumer Configuration
+spring.kafka.consumer.group-id=group_id
+spring.kafka.consumer.auto-offset-reset=earliest
+spring.kafka.consumer.key-deserializer=org.apache.kafka.common.serialization.StringDeserializer
+spring.kafka.consumer.value-deserializer=org.apache.kafka.common.serialization.StringDeserializer
+
+# Application Topics
+topic.name.producer=topico.comando.teste
+topic.name.consumer=topico.comando.teste
+```
+- Criando um tópico pelo próprio *Spring*
 ```java
-private KafkaTemplate<String, Object> kafkaTemplate;
+import org.apache.kafka.clients.admin.NewTopic;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.kafka.config.TopicBuilder;
+
+@Configuration
+public class KafkaConfig {
+
+    @Bean
+    public NewTopic topic() {
+        return TopicBuilder.name("topico.comando.teste")
+                .partitions(1)
+                .replicas(1)
+                .build();
+    }
+}
+```
+- Implementando o producer
+```java
+@Service
+public class BolsaKafkaProducer {
+
+    @Value("${topic.name.producer}")
+    private String topicName;
+
+    private static final Logger log = LoggerFactory.getLogger(BolsaKafkaProducer.class);
+
+    private final KafkaTemplate<String, String> kafkaTemplate;
+
+    public BolsaKafkaProducer(KafkaTemplate<String, String> kafkaTemplate) {
+        this.kafkaTemplate = kafkaTemplate;
+    }
+
+    public void send(String message) {
+
+        kafkaTemplate.send(topicName, message)
+            .whenComplete((result, exception) -> {
+
+                if (exception != null) {
+                    log.error("Erro ao enviar mensagem", exception);
+                } else {
+                    log.info("Mensagem enviada: {}", message);
+                    log.info("Tópico: {} | Partição: {}",
+                            result.getRecordMetadata().topic(),
+                            result.getRecordMetadata().partition());
+                }
+            });
+    }
+}
+
+```
+- Implementando o consumer
+```java
+@Service
+public class BolsaKafkaConsumer {
+
+    private static final Logger log = LoggerFactory.getLogger(BolsaKafkaConsumer.class);
+
+    @KafkaListener(topics = "${topic.name.consumer}")
+    public void consume(ConsumerRecord<String, String> payload) {
+
+        log.info("Tópico: {}", payload.topic());
+        log.info("Chave: {}", payload.key());
+        log.info("Headers: {}", payload.headers());
+        log.info("Partição: {}", payload.partition());
+        log.info("Valor: {}", payload.value());
+    }
+}
+```
+- Endpoint do producer
+```java
+@RestController
+@RequestMapping("/bolsa")
+public class BolsaKafkaController {
+
+    private final BolsaKafkaProducer producer;
+
+    public BolsaKafkaController(BolsaKafkaProducer producer) {
+        this.producer = producer;
+    }
+
+    @PostMapping("/producer")
+    public ResponseEntity<String> producer(@RequestBody String mensagem) {
+
+        producer.send(mensagem);
+        return ResponseEntity.accepted().body("Mensagem encaminhada para publicação no Kafka!");
+    }
+}
+```
+- Para trabalhar com objetos java, criar, por exemplo uma classe
+```java
+public class OrdemBolsa {}
+    public String codigo;
+    public String operacao;
+    public Integer quantidade;
+    public Double valor
+}
+```
+
+- Serialização de Objetos
+```
+# Producer JSON
+spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
+spring.kafka.producer.value-serializer=org.springframework.kafka.support.serializer.JsonSerializer
+
+# Consumer JSON
+spring.kafka.consumer.key-deserializer=org.apache.kafka.common.serialization.StringDeserializer
+spring.kafka.consumer.value-deserializer=org.springframework.kafka.support.serializer.JsonDeserializer
+
+spring.kafka.consumer.properties[spring.json.trusted.packages]=aula.microservicos.kafka.model
+spring.kafka.consumer.properties[spring.json.value.default.type]=aula.microservicos.kafka.model.OrdemBolsa
+
+```
+- Atualizar o produtor
+```java
+@Service
+public class BolsaKafkaProducer {
+
+    private final KafkaTemplate<String, OrdemBolsa> kafkaTemplate;
+
+    @Value("${topic.name.producer}")
+    private String topicName;
+
+    public BolsaKafkaProducer(
+            KafkaTemplate<String, OrdemBolsa> kafkaTemplate) {
+        this.kafkaTemplate = kafkaTemplate;
+    }
+
+    public void send(OrdemBolsa ordem) {
+
+        kafkaTemplate.send(topicName, ordem)
+            .whenComplete((result, exception) -> {
+
+                if (exception != null) {
+                    log.error("Erro ao enviar ordem", exception);
+                } else {
+                    log.info("Ordem enviada: {}", ordem);
+                }
+            });
+    }
+}
+```
+- Atualizar o consumidor
+```java
+@Service
+public class BolsaKafkaConsumer {
+
+    private static final Logger log = LoggerFactory.getLogger(BolsaKafkaConsumer.class);
+
+    @KafkaListener(topics = "${topic.name.consumer}")
+    public void consume(OrdemBolsa ordem) {
+
+        log.info("Código: {}", ordem.codigo());
+        log.info("Operação: {}", ordem.operacao());
+        log.info("Quantidade: {}", ordem.quantidade());
+        log.info("Valor: {}", ordem.valor());
+    }
+}
 ```
 ## Versionamento de API
 - Via URL
-    ```
-    GET /v1/aluno/10520
-    GET /v2/aluno/10520
-    ```
+```bash
+GET /v1/aluno/10520
+GET /v2/aluno/10520
+```
 - Header versioning
     ```java
     @GetMapping(value="/aluno", headers = "X-API-VERSION=1")
