@@ -2613,7 +2613,7 @@ spring.application.name=config-server
 server.port=8888
 
 spring.cloud.config.server.git.uri=file://${user.home}/config-repo
-spring.cloud.config.server.git.default-label=master
+spring.cloud.config.server.git.default-label=main
 ```
 
 Verifique o nome da branch:
