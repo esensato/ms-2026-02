@@ -2637,30 +2637,16 @@ http://localhost:8888
 
 ## Testando o Config Server
 
-O Spring Cloud Config disponibiliza uma API HTTP para consultar as configurações.
-
-O formato da URL é:
-
-```text
-/{application}/{profile}/{label}
-```
-
-Exemplos:
-
-Consultar o microserviço carro no ambiente de desenvolvimento:
-
+- O Spring Cloud Config disponibiliza uma API HTTP para consultar as configurações.
+- Consultar o microserviço carro no ambiente de desenvolvimento:
 ```bash
 curl http://localhost:8888/carro/dev
 ```
-
-Consultar o ambiente de produção:
-
+- Consultar o ambiente de produção:
 ```bash
 curl http://localhost:8888/carro/prd
 ```
-
-Consultar o microserviço motorista:
-
+- Consultar o microserviço motorista:
 ```bash
 curl http://localhost:8888/motorista/dev
 ```
@@ -2669,9 +2655,8 @@ O servidor retornará um JSON contendo as propriedades encontradas.
 
 ## Configurando o Config Client
 
-Agora vamos configurar os microserviços para que possam consultar o Config Server.
-
-Utilizaremos o microserviço `carro` como exemplo.
+- Configurar os microserviços para que possam consultar o Config Server.
+- Utilizar o microserviço `carro` como exemplo.
 
 ### Dependência Maven
 
@@ -2716,18 +2701,14 @@ spring.application.name=carro
 spring.config.import=configserver:http://localhost:8888
 spring.profiles.active=dev
 ```
-
-A propriedade `spring.application.name` identifica a aplicação.
-A propriedade `spring.config.import` informa que a aplicação deverá consultar o Config Server durante sua inicialização.
-A propriedade `spring.profiles.active` indica o ambiente utilizado.
-
-Não é necessário definir adicionalmente `spring.cloud.config.profile`, pois os perfis ativos da aplicação são utilizados por padrão.
+- A propriedade `spring.application.name` identifica a aplicação.
+- A propriedade `spring.config.import` informa que a aplicação deverá consultar o Config Server durante sua inicialização.
+- A propriedade `spring.profiles.active` indica o ambiente utilizado.
 
 ## Acessando as propriedades remotas
 
-As propriedades obtidas do Config Server podem ser utilizadas normalmente na aplicação Spring Boot.
-
-Crie um controller:
+- As propriedades obtidas do Config Server podem ser utilizadas normalmente na aplicação Spring Boot.
+- Crie um controller:
 
 ```java
 @RestController
@@ -2755,13 +2736,13 @@ public class CarroController {
 }
 ```
 
-Teste (observar que a porta está definida nas configurações do repo git - **8081**):
+- Testar (observar que a porta está definida nas configurações do repo git - **8081**):
 
 ```bash
 curl http://localhost:8081/carro/info
 ```
 
-As propriedades foram obtidas de diferentes arquivos:
+- As propriedades foram obtidas de diferentes arquivos:
 
 - `application.properties`: empresa.
 - `carro.properties`: fabricante.
@@ -2769,35 +2750,32 @@ As propriedades foram obtidas de diferentes arquivos:
 
 ## Alterando o ambiente de execução
 
-Para executar o microserviço carro em produção, altere o perfil ativo:
+- Para executar o microserviço carro em produção, altere o perfil ativo:
 
 ```properties
 spring.profiles.active=prd
 ```
 
-Ou inicie a aplicação com:
+- Ou inicie a aplicação com:
 
 ```bash
 java -jar carro.jar --spring.profiles.active=prd
 ```
 
-Nesse caso, o Spring Cloud Config consultará o arquivo:
+- Nesse caso, o Spring Cloud Config consultará o arquivo:
 
 ```text
 carro-prd.properties
 ```
 
-O mesmo código-fonte poderá ser utilizado em diferentes ambientes, sem a necessidade de alterar diretamente os arquivos de configuração da aplicação.
+- O mesmo código-fonte poderá ser utilizado em diferentes ambientes, sem a necessidade de alterar diretamente os arquivos de configuração da aplicação.
 
 ## Atualizando as configurações
 
-Por padrão, o Config Client carrega as configurações durante a inicialização.
-
-Uma alteração no repositório Git não atualiza automaticamente as propriedades de uma aplicação que já está em execução.
-
-Uma possibilidade é reiniciar a aplicação.
-
-Também podemos implementar atualização sob demanda utilizando Spring Boot Actuator e a anotação `@RefreshScope`.
+- Por padrão, o Config Client carrega as configurações durante a inicialização.
+- Uma alteração no repositório Git não atualiza automaticamente as propriedades de uma aplicação que já está em execução.
+- Uma possibilidade é reiniciar a aplicação.
+- Também podemos implementar atualização sob demanda utilizando Spring Boot Actuator e a anotação `@RefreshScope`.
 
 ### Adicionando a dependência Actuator
 
@@ -2843,7 +2821,7 @@ Em seguida, solicite a atualização das configurações:
 curl -X POST http://localhost:8081/actuator/refresh
 ```
 
-O endpoint fará com que as configurações remotas sejam consultadas novamente e atualizará os componentes que utilizam `@RefreshScope`.
+- O endpoint fará com que as configurações remotas sejam consultadas novamente e atualizará os componentes que utilizam `@RefreshScope`.
 
 ## Eureka
 - É um servidor de nomes onde os microserviços podem ser registrados
