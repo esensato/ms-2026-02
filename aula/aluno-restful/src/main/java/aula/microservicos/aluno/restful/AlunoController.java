@@ -1,10 +1,19 @@
 package aula.microservicos.aluno.restful;
 
 import java.util.Optional;
-import org.springframework.security.core.Authentication;
+
+import java.util.HashMap;
 import java.util.Map;
+
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.serialization.StringSerializer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.core.DefaultKafkaProducerFactory;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,15 +40,19 @@ import org.springframework.web.bind.annotation.PutMapping;
 @RequestMapping("/aluno")
 public class AlunoController {
 
+    @Value("${topic.name.producer}")
+    private String topicName;
+    private final KafkaTemplate<String, String> kafkaTemplate;
+
     private final AlunoRepository repo;
-    private AlunoMetrica metrica;
-    private JwtUtil jwtUtil = null;
+
+    private static final Logger log = LoggerFactory.getLogger(AlunoController.class);
 
     // Injeção de dependência do AlunoRepository
-    public AlunoController(AlunoRepository repo, AlunoMetrica metrica, JwtUtil jwtUtil) {
+    public AlunoController(AlunoRepository repo, KafkaTemplate<String, String> kafkaTemplate) {
         this.repo = repo;
-        this.metrica = metrica;
-        this.jwtUtil = jwtUtil;
+        this.kafkaTemplate = kafkaTemplate;
+
     }
 
     @GetMapping("/versao")
@@ -93,11 +106,23 @@ public class AlunoController {
     @PostMapping
     public ResponseEntity<Aluno> cadastro(@Valid @RequestBody Aluno aluno) {
 
-        repo.save(aluno);
-        metrica.alunoCriado();
+        Aluno novo = repo.save(aluno);
+
         // if (aluno.nome.length() > 30) {
         // return new ResponseEntity<Aluno>(new Aluno(), HttpStatus.BAD_REQUEST);
         // } else {
+        kafkaTemplate.send(topicName, "id_Aluno: " + novo.id)
+                .whenComplete((result, exception) -> {
+
+                    if (exception != null) {
+                        log.error("Erro ao enviar mensagem", exception);
+                    } else {
+                        log.info("Mensagem enviada: {}", "id_Aluno: " + novo.id);
+                        log.info("Tópico: {} | Partição: {}",
+                                result.getRecordMetadata().topic(),
+                                result.getRecordMetadata().partition());
+                    }
+                });
         return new ResponseEntity<Aluno>(aluno, HttpStatus.OK);
         // }
 
@@ -136,14 +161,6 @@ public class AlunoController {
         } else {
             throw new AlunoInexistenteException();
         }
-
-    }
-
-    @GetMapping("/token")
-    public ResponseEntity<String> gerarToken(Authentication authentication) {
-
-        String token = jwtUtil.gerarToken(authentication.getName(), Map.of());
-        return ResponseEntity.ok(token);
 
     }
 

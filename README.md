@@ -2256,8 +2256,8 @@ curl http://localhost:9090/seguranca/user
 </dependency>
 
 <dependency>
-<groupId>org.springframework.kafka</groupId>
-<artifactId>spring-kafka</artifactId>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-kafka</artifactId>
 </dependency>
 
 ```
@@ -2441,50 +2441,16 @@ public class BolsaKafkaConsumer {
     }
 }
 ```
-## Versionamento de API
-- Via URL
-```bash
-GET /v1/aluno/10520
-GET /v2/aluno/10520
-```
-- Header versioning
-    ```java
-    @GetMapping(value="/aluno", headers = "X-API-VERSION=1")
-    public ResponseEntity<AlunoBeanV1> getAlunoV1Header() { 
-    return new ResponseEntity<AlunoBeanV1>(new AlunoBeanV1(1, "Joao", "1000"), HttpStatus.OK); 
-    }
-    @GetMapping(value="/aluno", headers = "X-API-VERSION=2")
-    public ResponseEntity<AlunoBeanV2> getAlunoV2Header() { 
-    return new ResponseEntity<AlunoBeanV2>(new AlunoBeanV2(1, "Joao", "1000", 100), HttpStatus.OK); 
-    }
-    ```
-    - Inserir um parâmetro no `header` da (`X-API-VERSION=1`) requisição com o valor da versão desejada
-- Media-Type
-    ```java
-    @GetMapping(value="/aluno", produces="application/sistema.academico-v1+json")
-    public ResponseEntity<AlunoBeanV1> getAlunoV1Produces() { 
-    return new ResponseEntity<AlunoBeanV1>(new AlunoBeanV1(1, "Joao", "1000"), HttpStatus.OK); 
-    }
-    @GetMapping(value="/aluno", produces="application/sistema.academico-v2+json")
-    public ResponseEntity<AlunoBeanV2> getAlunoV2Produces() { 
-    return new ResponseEntity<AlunoBeanV2>(new AlunoBeanV2(1, "Joao", "1000", 100), HttpStatus.OK); 
-    }
-    ```
-    - Inserir um parâmetro no `header` da (`Accept`) requisição com o valor da versão desejada (`application/sistema.academico-v1+json` ou `application/sistema.academico-v2+json`)
-
-
 # Gestão de Configurações
 
-Em uma arquitetura de microserviços, normalmente temos diversas aplicações executando de maneira independente.
-
-Cada aplicação possui suas próprias configurações, como:
-
-- Endereço de bancos de dados.
-- Portas de comunicação.
-- Endereços de outros microserviços.
-- Configurações de mensageria.
-- Parâmetros específicos de cada ambiente.
-- Credenciais e informações de conexão.
+- Em uma arquitetura de microserviços, normalmente temos diversas aplicações executando de maneira independente.
+- Cada aplicação possui suas próprias configurações, como:
+    - Endereço de bancos de dados.
+    - Portas de comunicação.
+    - Endereços de outros microserviços.
+    - Configurações de mensageria.
+    - Parâmetros específicos de cada ambiente.
+    - Credenciais e informações de conexão.
 
 Um problema comum é a necessidade de manter essas configurações em diversos arquivos e aplicações.
 
@@ -2512,77 +2478,76 @@ cd ~/config-repo
 git init
 ```
 
-Crie os seguintes arquivos:
-
-```text
-config-repo/
-    application.properties
-    carro.properties
-    carro-dev.properties
-    carro-prd.properties
-    motorista.properties
-    motorista-dev.properties
-    motorista-prd.properties
-```
-
 ### Configurações compartilhadas
 
 Arquivo `application.properties`:
 
-```properties
+```bash
+cat << EOF > application.properties
 empresa.nome=Faculdade
 sistema.versao=1.0
+EOF
 ```
-
-Essas propriedades estarão disponíveis para todas as aplicações.
-
+- Essas propriedades estarão disponíveis para todas as aplicações.
 ### Configurações do microserviço carro
 
-Arquivo `carro.properties`:
+- Arquivo `carro.properties`:
 
-```properties
+```bash
+cat << EOF > carro.properties
 spring.application.name=carro
 carro.fabricante=Volkswagen
 carro.limite.consulta=100
+EOF
 ```
 
-Arquivo `carro-dev.properties`:
+- Arquivo `carro-dev.properties`:
 
-```properties
+```bash
+cat << EOF > carro-dev.properties
 server.port=8081
 carro.ambiente=desenvolvimento
 carro.database.url=jdbc:mysql://localhost:3306/carro_dev
+EOF
 ```
 
-Arquivo `carro-prd.properties`:
+- Arquivo `carro-prd.properties`:
 
-```properties
+```bash
+cat << EOF > carro-prd.properties
 server.port=8081
 carro.ambiente=producao
 carro.database.url=jdbc:mysql://servidor-producao:3306/carro
+EOF
 ```
 
 ### Configurações do microserviço motorista
 
-Arquivo `motorista.properties`:
+- Arquivo `motorista.properties`:
 
-```properties
+```bash
+cat << EOF > motorista.properties
 spring.application.name=motorista
 motorista.limite.consulta=50
+EOF
 ```
 
-Arquivo `motorista-dev.properties`:
+- Arquivo `motorista-dev.properties`:
 
-```properties
+```bash
+cat << EOF > motorista-dev.properties
 server.port=8082
 motorista.ambiente=desenvolvimento
+EOF
 ```
 
-Arquivo `motorista-prd.properties`:
+- Arquivo `motorista-prd.properties`:
 
-```properties
+```bash
+cat << EOF > motorista-prd.properties
 server.port=8082
 motorista.ambiente=producao
+EOF
 ```
 
 ### Registrando os arquivos no Git
@@ -2594,35 +2559,35 @@ git commit -m "Configuracoes iniciais dos microservicos"
 
 ## Criando o Spring Cloud Config Server
 
-Crie um projeto Spring Boot utilizando o Spring Initializr:
-
-https://start.spring.io/
-
-Adicione a dependência Config Server.
+- Criar uma aplicação que será o **Config Server**
+- Adicione a dependência Config Server.
 
 ### Dependência Maven
 
 ```xml
-<dependency>
+    <properties>
+        <java.version>17</java.version>
+        <spring-cloud.version>2025.1.4</spring-cloud.version>
+    </properties>
+
+    <!-- Gerenciamento das versões do Spring Cloud -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+	<dependency>
     <groupId>org.springframework.cloud</groupId>
     <artifactId>spring-cloud-config-server</artifactId>
-</dependency>
-```
-
-Configure também o Spring Cloud BOM, utilizando uma versão compatível com a versão do Spring Boot:
-
-```xml
-<dependencyManagement>
-    <dependencies>
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-dependencies</artifactId>
-            <version>${spring-cloud.version}</version>
-            <type>pom</type>
-            <scope>import</scope>
-        </dependency>
-    </dependencies>
-</dependencyManagement>
+    <version>5.0.3</version>
+	</dependency>
 ```
 
 ### Habilitando o Config Server
@@ -2711,10 +2676,33 @@ Utilizaremos o microserviço `carro` como exemplo.
 ### Dependência Maven
 
 ```xml
-<dependency>
-    <groupId>org.springframework.cloud</groupId>
-    <artifactId>spring-cloud-starter-config</artifactId>
-</dependency>
+    <properties>
+        <java.version>17</java.version>
+        <spring-cloud.version>2025.1.4</spring-cloud.version>
+    </properties>
+
+    <!-- Gerenciamento das versões do Spring Cloud -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-starter-config</artifactId>
+    </dependency>
+
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
 ```
 
 Utilize o mesmo Spring Cloud BOM e a mesma estratégia de gerenciamento de versões do Config Server.
@@ -2725,16 +2713,12 @@ Arquivo `application.properties`:
 
 ```properties
 spring.application.name=carro
-
 spring.config.import=configserver:http://localhost:8888
-
 spring.profiles.active=dev
 ```
 
 A propriedade `spring.application.name` identifica a aplicação.
-
 A propriedade `spring.config.import` informa que a aplicação deverá consultar o Config Server durante sua inicialização.
-
 A propriedade `spring.profiles.active` indica o ambiente utilizado.
 
 Não é necessário definir adicionalmente `spring.cloud.config.profile`, pois os perfis ativos da aplicação são utilizados por padrão.
@@ -2771,20 +2755,10 @@ public class CarroController {
 }
 ```
 
-Teste:
+Teste (observar que a porta está definida nas configurações do repo git - **8081**):
 
 ```bash
 curl http://localhost:8081/carro/info
-```
-
-Resposta esperada:
-
-```json
-{
-    "empresa": "Faculdade",
-    "fabricante": "Volkswagen",
-    "ambiente": "desenvolvimento"
-}
 ```
 
 As propriedades foram obtidas de diferentes arquivos:
@@ -2859,16 +2833,12 @@ public class CarroController {
     }
 }
 ```
-
 Após alterar e registrar as configurações no Git, execute:
-
 ```bash
 git add .
 git commit -m "Atualizacao das configuracoes"
 ```
-
 Em seguida, solicite a atualização das configurações:
-
 ```bash
 curl -X POST http://localhost:8081/actuator/refresh
 ```
@@ -2883,6 +2853,24 @@ O endpoint fará com que as configurações remotas sejam consultadas novamente 
 ### Eureka Server
 - Adicionar a dependência
     ```xml
+    <properties>
+        <java.version>17</java.version>
+        <spring-cloud.version>2025.1.4</spring-cloud.version>
+    </properties>
+
+    <!-- Gerenciamento das versões do Spring Cloud -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependency>
     <groupId>org.springframework.cloud</groupId>
     <artifactId>spring-cloud-starter-netflix-eureka-server</artifactId>
@@ -2912,31 +2900,43 @@ O endpoint fará com que as configurações remotas sejam consultadas novamente 
 - Os serviços devem registrar-se junto ao servidor de nomes
 - Para isso, incluir a dependência
     ```xml
+    <properties>
+        <java.version>17</java.version>
+        <spring-cloud.version>2025.1.4</spring-cloud.version>
+    </properties>
+
+    <!-- Gerenciamento das versões do Spring Cloud -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependency>
     <groupId>org.springframework.cloud</groupId>
     <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
     </dependency>
     ```
-- Incluir nas propriedades
-    ```properties
-    server.port=8020
-    spring.application.name=nome_registro
-    ```
 ### Eureka Cliente - Acesso ao Serviço
 - Com os clientes registrados no servidor Eureka é possível acessá-los por meio dos nomes definidos em `spring.application.name`
 - Incluir as configurações
-    ```properties
-    spring.application.name=nome_aplicacao
-    eureka.client.serviceUrl.defaultZone=http://localhost:8761/eureka
-    eureka.instance.hostname=localhost
-    ```
+```properties
+eureka.client.serviceUrl.defaultZone=http://localhost:8761/eureka
+eureka.instance.hostname=localhost
+```
 - Utilizar o *OpenFeign* para facilicar o acesso aos serviços
-    ```xml
-    <dependency>
+```xml
+<dependency>
     <groupId>org.springframework.cloud</groupId>
     <artifactId>spring-cloud-starter-openfeign</artifactId>
-    </dependency>
-    ```
+</dependency>
+```
 - Habilitar o uso do *OpenFeign*
     ```java
     @SpringBootApplication
@@ -2950,251 +2950,66 @@ O endpoint fará com que as configurações remotas sejam consultadas novamente 
     }
     ```
 - Criar os *proxyes* para realizar as chamadas aos *endpoints*
-    ```java
-    @FeignClient(name = "validador-service", url = "localhost:8020")
-    public interface ValidadorProxy {
-        @GetMapping("/validar/{valor}")
-        public ResponseEntity<Boolean> validar(@PathVariable String valor);
-    }
-    ```
+```java
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 
-- Injetar os *proxyes*
-    ```java
-    @Autowired
-    private ValidadorProxy validador;
-    @Autowired
-    private CriptografiaProxy criptografia;
-    ```
+@FeignClient(name = "carro")
+public interface CarroProxy {
+    @GetMapping("/carro/info")
+    public ResponseEntity<String> info();
+}
+```
+- Criar o *controller* para realizar o teste
+```java
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/motorista")
+public class MotoristaController {
+
+    private CarroProxy proxy;
+
+    public MotoristaController(CarroProxy proxy) {
+        this.proxy = proxy;
+    }
+
+    @GetMapping("/carro")
+    public ResponseEntity<String> carro() {
+        return proxy.info();
+    }
+
+}
+```
 ## Efetuando o Deploy
 - Executar em um terminal os comandos:
-    ```powershell
-    ./mvn clean
-    ./mvnw package -f "/Users/esensato/Documents/espm/repo/ms-2024-01/aula/kafka-producer/pom.xml"
-    ```
+```bash
+./mvnw clean
+./mvnw package
+```
 - Para executar:
-    ```powershell
-    cd target kafka-producer-0.0.1-SNAPSHOT.jar 
-    java -jar  
-    ```
+```bash
+cd target 
+java -jar carro-0.0.1-SNAPSHOT.jar 
+```
 - Criar um `Dockerfile` com o conteúdo:
 ```dockerfile
-    FROM openjdk:17
-    RUN mkdir /app
-    COPY kafka-producer-0.0.1-SNAPSHOT.jar /app
-    WORKDIR /app
-    RUN cd /app
-    CMD ["java", "-jar", "kafka-producer-0.0.1-SNAPSHOT.jar"]
+FROM openjdk:17
+RUN mkdir /app
+COPY kafka-producer-0.0.1-SNAPSHOT.jar /app
+WORKDIR /app
+RUN cd /app
+CMD ["java", "-jar", "carro-0.0.1-SNAPSHOT.jar"]
 ```
 - Efetuar o *build* da imagem
-```
-    docker build -t kafka-producer .
+```bash
+docker build -t carro .
 ```
 - Executando o *container*
+```bash
+docker run -d -p 8080:8080 --name carro
 ```
-    docker run -d -p 8080:8080 --name producer kafka-producer
-```
-***
-### Spring State Machine
-- Aluno pode solicitar o cancelamento de uma matrícula em determinada disciplina
-- Para isso, existe um *worflow* conforme abaixo
-![screenshot](img/wf.png)
-- Importar as dependências
-```xml
-<dependency>
-    <groupId>org.springframework.statemachine</groupId>
-    <artifactId>spring-statemachine-starter</artifactId>
-    <version>3.2.1</version>
-</dependency>
-```
-- Criar os estados e eventos
-    ```java
-    public enum CancelamentoMatriculaEstado {
-        SOLICITADO, APROVADO_COORDENADOR, APROVADO_SECRETARIA
-    }
-    ```
-    ```java
-    public enum CancelamentoMatriculaEvento {
-        APROVAR_COORDENADOR, APROVAR_SECRETARIA
-    }
-    ```
-- A configuração da máquina de estados deve ser feita em uma classe anotada com `@Configuration` e `@EnableStateMachine`
-    ```java
-    @Configuration
-    @EnableStateMachineFactory
-    public class CancelamentoWorkflowConfig extends StateMachineConfigurerAdapter<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> {
-
-        private static final Logger logger = LoggerFactory.getLogger(CancelamentoWorkflowConfig.class);
-        
-    }
-    ```
-- Configurar os estados
-    ```java
-    @Override
-    public void configure(StateMachineStateConfigurer<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> states)
-            throws Exception {
-
-        states.withStates()
-                .initial(CancelamentoMatriculaEstado.SOLICITADO, initialAction())
-                .end(CancelamentoMatriculaEstado.APROVADO_SECRETARIA)
-                .state(CancelamentoMatriculaEstado.APROVADO_COORDENADOR);
-
-    }
-
-    @Bean
-    public Action<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> initialAction() {
-        return new Action<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento>() {
-
-            @Override
-            public void execute(StateContext<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> context) {
-                logger.info("Iniciado o WF Cancelamento de Matricula");
-            }
-        };
-    }
-    ```
-- Configurar as transições entre os estados
-    ```java    
-    @Override
-    public void configure(
-            StateMachineTransitionConfigurer<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> transitions)
-            throws Exception {
-
-        transitions.withExternal()
-                .source(CancelamentoMatriculaEstado.SOLICITADO).target(CancelamentoMatriculaEstado.APROVADO_COORDENADOR)
-                .event(CancelamentoMatriculaEvento.APROVAR_COORDENADOR)
-                .and()
-                .withExternal()
-                .source(CancelamentoMatriculaEstado.APROVADO_COORDENADOR)
-                .target(CancelamentoMatriculaEstado.APROVADO_SECRETARIA)
-                .event(CancelamentoMatriculaEvento.APROVAR_SECRETARIA);
-
-    }
-    ```
-- Definir as configurações gerais e o *listener* que será acionado quando houver uma transição entre os estados
-    ```java    
-    @Override
-    public void configure(
-            StateMachineConfigurationConfigurer<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> config)
-            throws Exception {
-
-        config.withConfiguration().autoStartup(true).listener(listener()).machineId("cancelamento-matricula");
-    }
-
-    @Bean
-    public StateMachineListener<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> listener() {
-        return new StateMachineListenerAdapter<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento>() {
-            @Override
-            public void stateChanged(State<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> from,
-                    State<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> to) {
-
-                logger.info("Estado alterado para: " + to.getId());
-            }
-        };
-    }
-    ```
-- Efetuar as transições de eventos entre os estados
-    ```java
-    @Service
-    public class FaculdadeServico {
-    
-        private static final Logger logger = LoggerFactory.getLogger(FaculdadeServico.class);
-    
-        @Autowired
-        private StateMachineFactory<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> cancelamentoFactory;
-    
-        private StateMachine<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> cancelamento;
-    
-        public CancelamentoMatriculaEstado solicitar() {
-            this.cancelamento = cancelamentoFactory.getStateMachine();
-            cancelamento.startReactively().block();
-            logger.info("Solicitado Cancelamento::UUID = " + cancelamento.getUuid().toString());
-            logger.info("Estado = " + cancelamento.getState().getId() + " - finalizado = " + cancelamento.isComplete());
-            return cancelamento.getState().getId();
-        }
-    
-        public CancelamentoMatriculaEstado aprovarCoordenador() {
-    
-            cancelamento
-                    .sendEvent(
-                            Mono.just(MessageBuilder.withPayload(CancelamentoMatriculaEvento.APROVAR_COORDENADOR).build()))
-                    .blockFirst();
-            logger.info("Estado = " + cancelamento.getState().getId() + " - finalizado = " + cancelamento.isComplete());
-            return cancelamento.getState().getId();
-    
-        }
-    
-        public CancelamentoMatriculaEstado aprovarSecretaria() {
-    
-            cancelamento
-                    .sendEvent(
-                            Mono.just(MessageBuilder.withPayload(CancelamentoMatriculaEvento.APROVAR_SECRETARIA).build()))
-                    .blockFirst();
-            cancelamento.stopReactively().block();
-            logger.info("Estado = " + cancelamento.getState().getId() + " - finalizado = " + cancelamento.isComplete());
-            return cancelamento.getState().getId();
-    
-        }
-    
-    }
-    ```
-- Finalmente, criar os *endpoints* para executar os eventos
-    ```java
-     @PutMapping("/matricula/cancelar/solicitar/{rm}/{idDisciplina}")
-    public ResponseEntity<CancelamentoMatriculaEstado> solicitarCancelamento(@PathVariable String rm,
-            @PathVariable String idDisciplina) {
-
-        return new ResponseEntity<CancelamentoMatriculaEstado>(faculdade.solicitar(), HttpStatus.OK);
-
-    }
-
-    @PutMapping("/matricula/cancelar/aprovar/coordenador/{rm}/{idDisciplina}")
-    public ResponseEntity<CancelamentoMatriculaEstado> aprovarCoordenador(@PathVariable String rm,
-            @PathVariable String idDisciplina) {
-        return new ResponseEntity<CancelamentoMatriculaEstado>(faculdade.aprovarCoordenador(), HttpStatus.OK);
-
-    }
-
-    @PutMapping("/matricula/cancelar/aprovar/secretaria/{rm}/{idDisciplina}")
-    public ResponseEntity<CancelamentoMatriculaEstado> aprovarSecretaria(@PathVariable String rm,
-            @PathVariable String idDisciplina) {
-        faculdade.aprovarSecretaria();
-        return new ResponseEntity<CancelamentoMatriculaEstado>(faculdade.aprovarSecretaria(), HttpStatus.OK);
-
-    }
-    ```
-- Ações podem ser executadas entre os estados associando uma `action` dentro da classe de configuração (Ex: `CancelamentoWorkflowConfig`)
-- No exemplo baxo são exibidas as variáveis que podem ser associadas na execução da ação
-    ```java
-    public void configure(
-        StateMachineTransitionConfigurer<CancelamentoMatriculaEstado, CancelamentoMatriculaEvento> transitions)
-        throws Exception {
-
-    transitions.withExternal()
-            .source(CancelamentoMatriculaEstado.SOLICITADO).target(CancelamentoMatriculaEstado.APROVADO_COORDENADOR)
-            .event(CancelamentoMatriculaEvento.APROVAR_COORDENADOR)
-            .and()
-            .withExternal()
-            .source(CancelamentoMatriculaEstado.APROVADO_COORDENADOR)
-            .target(CancelamentoMatriculaEstado.APROVADO_SECRETARIA)
-            .event(CancelamentoMatriculaEvento.APROVAR_SECRETARIA)
-            .action(ctx -> {
-                logger.info("Parametros: " + ctx.getStateMachine().getExtendedState().getVariables());
-            });
-
-    }
-    ```
-- Para associar variáveis, alterar a classe de serviços e incluir a variável por meio do `getExtendedState()`
-    ```java
-    public CancelamentoMatriculaEstado aprovarSecretaria() {
-
-    cancelamento.getExtendedState().getVariables().put("ID_ALUNO", "X");
-    
-    cancelamento
-            .sendEvent(
-                    Mono.just(MessageBuilder.withPayload(CancelamentoMatriculaEvento.APROVAR_SECRETARIA).build()))
-            .blockFirst();
-    cancelamento.stopReactively().block();
-    logger.info("Estado = " + cancelamento.getState().getId() + " - finalizado = " + cancelamento.isComplete());
-    return cancelamento.getState().getId();
-
-    }
-    ```
